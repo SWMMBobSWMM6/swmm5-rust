@@ -1,0 +1,6 @@
+corpus1729/EPA_PYSWMM_Additions/EPA_nrtestsuite_v2.5.0-dev/swc/swc17.inp
+corpus1729/LID/lid_bc_steadyflow.inp
+corpus1729/OpenSWMM_Code_Review_2026/2-conceptual/CON-03-lid-runon-to-every-partial-unit/CON-03_full-lid.inp
+corpus1729/OpenSWMM_Code_Review_2026/2-conceptual/CON-04-covered-barrel-returns-rain-over-all-lids/CON-04_barrel-only.inp
+corpus1729/OpenSWMM_Code_Review_2026/2-conceptual/CON-05-covered-barrel-rain-lost/CON-05_imperv.inp
+corpus1729/OpenSWMM_Code_Review_2026/4-io/IO-60-lid-idle-unit-100-percent-error/IO-60_idle-barrel.inp

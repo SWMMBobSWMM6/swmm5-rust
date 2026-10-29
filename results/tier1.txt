@@ -1,0 +1,33 @@
+corpus1729/EPA/72_H&H_Elements (2).inp
+corpus1729/EPA/72_H&H_Elements(1).inp
+corpus1729/EPA/72_H&H_Elements.inp
+corpus1729/EPA/Micro Tunnel Modeling.inp
+corpus1729/EPA_PYSWMM_Additions/EPA_nrtestsuite_v2.5.0-dev/swc/swc1.inp
+corpus1729/EPA_PYSWMM_Additions/EPA_nrtestsuite_v2.5.0-dev/swc/swc11.inp
+corpus1729/EPA_PYSWMM_Additions/EPA_nrtestsuite_v2.5.0-dev/swc/swc2.inp
+corpus1729/EPA_PYSWMM_Additions/EPA_nrtestsuite_v2.5.0-dev/swc/swc5.inp
+corpus1729/EPA_PYSWMM_Additions/EPA_nrtestsuite_v2.5.0-dev/swc/swc7.inp
+corpus1729/Hydrology/RUNOFF19__withCN_SW5.inp
+corpus1729/Hydrology/Subarea Routing.inp
+corpus1729/Hydrology/SubareaRouting.inp
+corpus1729/OWA_USER/user1_all_closed_shapes.inp
+corpus1729/OWA_USER/user1_modbaskethandle.inp
+corpus1729/OWA_USER/user1_rect_round.inp
+corpus1729/OWA_USER/user1_rect_triangular.inp
+corpus1729/OWA_USER/user1_semi_circular.inp
+corpus1729/OWA_USER/user1_semi_elliptical.inp
+corpus1729/OpenSWMM_Code_Review_2026/3-boundary/BND-17-polar-temperature-interpolation/BND-17_lat40-december.inp
+corpus1729/OpenSWMM_Code_Review_2026/3-boundary/BND-17-polar-temperature-interpolation/BND-17_lat70-december.inp
+corpus1729/OpenSWMM_Code_Review_2026/4-io/IO-44-hotstart-modified-horton-state/IO-44_continuous.inp
+corpus1729/OpenSWMM_Code_Review_2026/4-io/IO-44-hotstart-modified-horton-state/IO-44_day1.inp
+corpus1729/OpenSWMM_Code_Review_2026/4-io/IO-44-hotstart-modified-horton-state/IO-44_day2.inp
+corpus1729/OpenSWMM_Code_Review_2026/4-io/IO-44-hotstart-modified-horton-state/IO-44_day2_v6.inp
+corpus1729/OpenSWMM_Engine_Test_Decks/examples/reactions/wet_pool.inp
+corpus1729/OpenSWMM_Engine_Test_Decks/tests/regression/data/cn_regen_parity.inp
+corpus1729/OpenSWMM_Engine_Test_Decks/tests/unit/engine/data/curve_number_infil.inp
+corpus1729/OpenSWMM_Engine_Test_Decks/tests/unit/engine/data/mc_storm_parity/report_statistics.inp
+corpus1729/OpenSWMM_Engine_Test_Decks/tests/unit/engine/data/street_xsect.inp
+corpus1729/OpenSWMM_Engine_Test_Decks/tests/unit/engine/data/warnerr_undefined_outlet.inp
+corpus1729/SWMM5_NCIMM/5000_Subcatchments.inp
+corpus1729/SWMM5_NCIMM/lakes.inp
+corpus1729/SWMM5_NCIMM/seepage.inp
