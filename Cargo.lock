@@ -13,6 +13,14 @@ name = "swmm5-c2rust"
 version = "0.1.0"
 
 [[package]]
+name = "swmm5-difftest"
+version = "0.1.0"
+dependencies = [
+ "swmm5-c2rust",
+ "swmm5-rust",
+]
+
+[[package]]
 name = "swmm5-rust"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,11 @@
+[package]
+name = "swmm5-difftest"
+description = "Differential tests: functions of the safe engine against the same functions of the c2rust baseline, bit for bit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+swmm5-rust = { path = "../engine" }
+swmm5-c2rust = { path = "../c2rust-baseline" }
