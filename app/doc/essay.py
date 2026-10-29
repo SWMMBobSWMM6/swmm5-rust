@@ -231,10 +231,10 @@ BLOCKS = [
       "link's velocity, and C works it out through a pointer to the link's own cross-section, the same pointer that lets "
       "FILLED_CIRCULAR edit that section by a bit. The Rust had used a read-only copy there, on an argument that the edit could not matter by then; "
       "an argument is not a test, so it now calls the function C calls. Built from the source as it stands, the engine went through "
-      "the {N221} smoke and coverage models again and every other gated model with control rules but the ten largest, {NHC} in "
-      "all: {HC_RESULT}. The WebAssembly runs below are that build too."),
+      "the {N221} smoke and coverage models again and every other gated model with control rules but the ten that had hit the time cap, "
+      "{NHC} in all: {HC_RESULT}. The WebAssembly runs below are that build too."),
 ('p?TO_RESULT', "Some runs never got an answer. Two cores shared by several gates make every run slower, and the biggest models "
-      "hit the five-minute cap in one engine or both. Those, the ten largest rule models among them, were run again with "
+      "hit the five-minute cap in one engine or both. Those, the ten rule models among them, were run again with "
       "the engine as it stands, two at a time on a machine doing nothing else, with an hour each: {TO_RESULT}."),
 ('fig', 'gate', "The smoke and coverage set by folder. Log scale, because the folders differ in size by two orders of magnitude."),
 ('fig', 'corpus', "The corpus set by folder."),

@@ -37,8 +37,8 @@ Written by `app/build.py` from `results/`; the app's Verify tab and the Doc essa
 | Gate (EPA 5.2.4 as reference) | Models | Identical | Undefined in C | Different | Inconclusive |
 |---|---|---|---|---|---|
 | Native: smoke and coverage set | 221 | 215 | 6 | 0 | 0 |
-| Native: every corpus model with FILLED_CIRCULAR | 68 | 59 | 0 | 0 | 9 |
-| Native: corpus set (3,759 models) | 3,759 | 3,738 | 15 | 0 | 6 |
+| Native: every corpus model with FILLED_CIRCULAR | 68 | 68 | 0 | 0 | 0 |
+| Native: corpus set (3,759 models) | 3,759 | 3,742 | 15 | 0 | 2 |
 | Native, engine as it stands: the 221 set and every other gated model with control rules | 415 | 409 | 6 | 0 | 0 |
 | WebAssembly: swmm5-rust vs EPA, same libc | 221 | 215 | 6 | 0 | 0 |
 | WebAssembly: swmm5-cplus vs EPA (for reference) | 221 | 215 | 6 | 0 | 0 |
@@ -46,7 +46,7 @@ Written by `app/build.py` from `results/`; the app's Verify tab and the Doc essa
 
 "Identical" means the `.out` file byte for byte and the `.rpt` byte for byte after removing the three wall-clock lines. "Undefined in C": EPA reads or writes memory it does not own (an explicit list of decks, plus any model that crashes EPA with a signal); see docs/DEFECTS.md. "Inconclusive": a run hit the time or memory cap.
 
-Inconclusive: `OWA_EXTRAN/longTS_extran1.inp`, `OpenSWMM_Code_Review_2026/4-io/IO-02-time-options-accept-nan-inf-huge/IO-02_end-time-1e30.inp` (IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA's own run does not end; not rerun), `SWMM5_NCIMM/1220_Nodes.inp`, `SWMM5_NCIMM/12334_Nodes.inp`, `SWMM5_NCIMM/2348_Nodes.inp`, `SWMM5_NCIMM/235_Subs_RDII.inp`, `SWMM5_NCIMM/23865_Nodes.inp`, `SWMM5_NCIMM/3363_Nodes.inp`, `SWMM5_NCIMM/4190_Nodes.inp`, `SWMM5_NCIMM/669_Subs_4500_Nodes.inp`, `SWMM5_NCIMM/6715_Nodes_400_Subs.inp`, `SWMM5_NCIMM/8117_Nodes.inp`, `SWMM5_NCIMM/8394_H&H_Elements.inp`, `SWMM5_NCIMM/indy_small.inp`, `Simon_EPA/Session38_100_Control_Rules.inp`
+Inconclusive: `OpenSWMM_Code_Review_2026/4-io/IO-02-time-options-accept-nan-inf-huge/IO-02_end-time-1e30.inp` (IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA's own run does not end; not rerun), `Simon_EPA/Session38_100_Control_Rules.inp`
 
 Native run time over 12 models (`tools/bench3.py`, CPU seconds, median of 5 interleaved runs of EPA, C++, Rust, EPA): swmm5-rust 1.12× EPA at the median, swmm5-cplus 0.94×; on ten of the twelve it is slower by more than EPA differs from itself on the same model; on two the difference is inside that noise (Rust).
 
