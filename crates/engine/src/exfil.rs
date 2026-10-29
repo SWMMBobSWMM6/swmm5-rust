@@ -279,13 +279,13 @@ fn createStorageExfil(prj: &mut Project, k: i32, x: &[f64]) -> i32
     //     (each TGrnAmpt is copied out, set, and written back, so no borrow
     //      of prj is held across the call)
     let mut btm: TGrnAmpt = **prj.Storage[ku].exfil.as_ref().unwrap().btmExfil.as_ref().unwrap();
-    let ok = grnampt_setParams(&mut btm, x);
+    let ok = grnampt_setParams(prj, &mut btm, x);
     **prj.Storage[ku].exfil.as_mut().unwrap().btmExfil.as_mut().unwrap() = btm;
     if ok == 0 {
         return error_setInpError(prj, ERR_NUMBER, b"");
     }
     let mut bank: TGrnAmpt = **prj.Storage[ku].exfil.as_ref().unwrap().bankExfil.as_ref().unwrap();
-    grnampt_setParams(&mut bank, x);
+    grnampt_setParams(prj, &mut bank, x);
     **prj.Storage[ku].exfil.as_mut().unwrap().bankExfil.as_mut().unwrap() = bank;
     0
 }

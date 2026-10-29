@@ -1123,9 +1123,11 @@ fn setEvap(prj: &mut Project, theDate: DateTime)
 
     // --- set soil recovery factor
     prj.Evap.recoveryFactor = 1.0;
+    prj.infil.EvapRecoveryFactor = prj.Evap.recoveryFactor; // (not in C: keep infil's copy in step)
     k = prj.Evap.recoveryPattern;
     if k >= 0 && prj.Pattern[k as usize].type_ == MONTHLY_PATTERN {
         prj.Evap.recoveryFactor = prj.Pattern[k as usize].factor[(mon - 1) as usize];
+        prj.infil.EvapRecoveryFactor = prj.Evap.recoveryFactor; // (not in C: keep infil's copy in step)
     }
 }
 

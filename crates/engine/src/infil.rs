@@ -66,7 +66,7 @@ pub struct InfilState {
     /// calls after the last change of `Evap.recoveryFactor` (climate_setState)
     /// and before every Green-Ampt evaluation (subcatch_getRunoff, LID units;
     /// routing's initSystemInflows before storage exfiltration).
-    EvapRecoveryFactor: f64,
+    pub(crate) EvapRecoveryFactor: f64,
 }
 
 impl Default for InfilState {

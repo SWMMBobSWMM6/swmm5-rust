@@ -1232,7 +1232,7 @@ fn validateLidGroup(prj: &mut Project, j: i32) {
             p[0] = prj.lid.LidProcs[ku].soil.suction * UCF(prj, RAINDEPTH);
             p[1] = prj.lid.LidProcs[ku].soil.kSat * UCF(prj, RAINFALL);
             p[2] = (prj.lid.LidProcs[ku].soil.porosity - prj.lid.LidProcs[ku].soil.wiltPoint) * (1.0 - lidUnit.initSat);
-            if grnampt_setParams(&mut lidUnit.soilInfil, &p) == FALSE {
+            if grnampt_setParams(prj, &mut lidUnit.soilInfil, &p) == FALSE {
                 let id = prj.lid.LidProcs[ku].ID.clone();
                 sstrncpy(&mut prj.Msg, &id, MAXMSG as usize);
                 sstrcat(&mut prj.Msg, ERR_SOIL_LAYER, MAXMSG as usize);
@@ -1247,7 +1247,7 @@ fn validateLidGroup(prj: &mut Project, j: i32) {
         if prj.lid.LidProcs[ku].lidType == VEG_SWALE {
             if prj.Subcatch[ju].infilModel == GREEN_AMPT || prj.Subcatch[ju].infilModel == MOD_GREEN_AMPT {
                 grnampt_getParams(prj, j, &mut p);
-                if grnampt_setParams(&mut lidUnit.soilInfil, &p) == FALSE {
+                if grnampt_setParams(prj, &mut lidUnit.soilInfil, &p) == FALSE {
                     let id = prj.lid.LidProcs[ku].ID.clone();
                     sstrncpy(&mut prj.Msg, &id, MAXMSG as usize);
                     sstrcat(&mut prj.Msg, ERR_GREEN_AMPT, MAXMSG as usize);
