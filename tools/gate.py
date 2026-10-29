@@ -16,6 +16,7 @@ ap.add_argument('--timeout', type=float, default=60)
 ap.add_argument('--jobs', type=int, default=2)
 ap.add_argument('--list')
 ap.add_argument('--mem', type=float, default=3, help='address-space cap per run, GiB (0: none)')
+ap.add_argument('--pair', action='store_true', help='run the two engines on a model at the same time (one core each)')
 a = ap.parse_args()
 a.ref = os.path.abspath(a.ref); a.test = os.path.abspath(a.test); a.corpus = os.path.abspath(a.corpus)
 
@@ -58,7 +59,7 @@ def run(exe, inp, work):
     try:
         p = subprocess.run([exe, inp, rpt, out], cwd=os.path.dirname(inp),
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                           timeout=a.timeout, preexec_fn=limits)
+                           timeout=(a.timeout or None), preexec_fn=limits)
         rc = p.returncode
     except subprocess.TimeoutExpired:
         rc = 'timeout'
@@ -74,8 +75,13 @@ def one(inp):
     with tempfile.TemporaryDirectory(dir='/tmp/claude-0') as d:
         wr = os.path.join(d, 'ref'); wt = os.path.join(d, 'test')
         os.makedirs(wr); os.makedirs(wt)
-        rc1, t1, r1, o1 = run(a.ref, inp, wr)
-        rc2, t2, r2, o2 = run(a.test, inp, wt)
+        if a.pair:
+            with ThreadPoolExecutor(2) as px:
+                f1 = px.submit(run, a.ref, inp, wr); f2 = px.submit(run, a.test, inp, wt)
+                rc1, t1, r1, o1 = f1.result(); rc2, t2, r2, o2 = f2.result()
+        else:
+            rc1, t1, r1, o1 = run(a.ref, inp, wr)
+            rc2, t2, r2, o2 = run(a.test, inp, wt)
     rec = dict(inp=os.path.relpath(inp, a.corpus), rc_ref=rc1, rc_test=rc2,
                t_ref=round(t1, 4), t_test=round(t2, 4),
                out_bytes=o1[1], out_same=(o1[0] == o2[0] and o1[1] == o2[1]), out_sha=o1[0][:16],

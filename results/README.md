@@ -52,6 +52,7 @@ WebAssembly gate records (`tools/wasm_gate3.py`): `rs_out`/`rs_rpt` (swmm5-rust 
 | `profile.json`, `profile_work/` | instruction counts per function (own and inclusive), calls per function and every caller-to-callee call count, EPA against swmm5-rust, from callgrind (`tools/profile.py`); the `.cg` files are callgrind's own output |
 | `lookup_disasm.txt` | `xsect.c`'s `lookup()` as compiled in both binaries: EPA's one `cvttsd2si` against the Rust's twelve instructions for the same conversion, and the Rust's table-read checks |
 | `memcap_models.txt`, `rs_memcap_rerun.jsonl` | models that ask for more than the gate's 3 GiB address-space cap, rerun without it (`gate.py --mem 0`): under the cap EPA reports ERROR 101 and the Rust stops with "memory allocation failed" |
+| `nocap_models.txt`, `rs_nocap_rerun.jsonl` | models EPA itself cannot finish inside the one-hour cap, run with no time cap, EPA and the engine as it stands side by side, one core each (`gate.py --timeout 0 --pair`) |
 | `rs_interface_serial.jsonl` | every gated model that SAVEs or USEs an interface file, rerun one at a time: run in parallel, two models can share one file in their folder (the 1000-year models do); these records replace the parallel ones |
 
 The C and C++ reference binaries in `ref/` are rebuilt byte for byte by `tools/build_refs.sh`, which records their compiler flags.

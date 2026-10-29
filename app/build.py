@@ -99,6 +99,9 @@ SERIAL = {r['inp']: r for r in jl(f'{RES}/rs_interface_serial.jsonl')}
 # models that ask for more than the gate's 3 GiB address-space cap, rerun without it: under the cap EPA's checked
 # calloc reports ERROR 101 and the Rust stops with "memory allocation failed" (a departure listed in the README)
 MEMCAP = {r['inp']: r for r in jl(f'{RES}/rs_memcap_rerun.jsonl')}
+# models EPA itself cannot finish inside the one-hour cap, run with no cap, EPA and Rust side by side (gate.py --pair)
+NOCAP = {r['inp']: r for r in jl(f'{RES}/rs_nocap_rerun.jsonl')}
+MEMCAP.update(NOCAP)
 def merged(rows): return [MEMCAP[r['inp']] if r['inp'] in MEMCAP else SERIAL[r['inp']] if r['inp'] in SERIAL
                           else RERUN.get(r['inp'], r) if classify(r) == 'inc' else r for r in rows]
 g221 = merged(jl(f'{RES}/rs_221_v2.jsonl')); T221 = tally(g221)
@@ -223,9 +226,23 @@ NUM['FC_RESULT'] = (f"{TFC['same']} of {TFC['n']} identical" + (f", {TFC['inc']}
 _TO = jl(f'{RES}/rs_timeouts_rerun.jsonl')
 if _TO:
     _tt = tally(_TO); _nto = sum(1 for l in open(f'{RES}/timeouts.txt') if l.strip()) if os.path.exists(f'{RES}/timeouts.txt') else _tt['n']
-    NUM['TO_RESULT'] = ((f"all {_nto} rerun" if _tt['n'] >= _nto else f"{_tt['n']} of {_nto} rerun when this was built") + f", {_tt['same']} identical"
+    _done = {r['inp'] for r in _TO}
+    _rest = [l.strip().split('corpus1729/', 1)[1] for l in open(f'{RES}/timeouts.txt') if l.strip()] if os.path.exists(f'{RES}/timeouts.txt') else []
+    _rest = [m for m in _rest if m not in _done]
+    NUM['TO_RESULT'] = (f"{_tt['n']} of the {_nto} finished inside the hour, {_tt['same']} of them identical"
                         + (f", {_tt['diff']} different" if _tt['diff'] else ', none different')
-                        + (f", {_tt['inc']} still running past the hour" if _tt['inc'] else ''))
+                        + (f", {_tt['inc']} past the hour" if _tt['inc'] else ''))
+    for _m in _rest:
+        _r = NOCAP.get(_m)
+        _nm = html.escape(_m.split('/')[-1])
+        if _r and classify(_r) == 'same':
+            NUM['TO_RESULT'] += (f". The last, <code>{_nm}</code>, kept EPA itself busy past the hour, so EPA and the Rust ran it side by "
+                                 f"side with no cap at all: identical, after {_r['t_ref'] / 60:.0f} minutes for EPA and {_r['t_test'] / 60:.0f} for the Rust")
+        elif _r:
+            NUM['TO_RESULT'] += f". The last, <code>{_nm}</code>, run with no cap: {classify(_r)}"
+        else:
+            NUM['TO_RESULT'] += (f". The last, <code>{_nm}</code>, kept EPA itself busy past the hour; it was running side by side with "
+                                 f"the Rust, with no cap, when this was built")
 if ghc:
     NUM['HC_RESULT'] = ((f"all {N_HC} run" if THC['n'] >= N_HC else f"{THC['n']} of {N_HC} run when this was built") + f", {THC['same']} identical"
                         + (f", {THC['ub']} undefined in C" if THC['ub'] else '') + (f", {THC['diff']} different" if THC['diff'] else ', none different')
