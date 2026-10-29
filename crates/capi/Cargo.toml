@@ -1,0 +1,13 @@
+[package]
+name = "swmm5-rust-capi"
+description = "C ABI of swmm5-rust (EPA's swmm_* calls plus handles), for WebAssembly and C callers. The only crate with unsafe code: reading C strings and pointers at the boundary."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "swmm5rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+swmm5-rust = { path = "../engine" }

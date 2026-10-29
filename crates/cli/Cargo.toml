@@ -1,0 +1,13 @@
+[package]
+name = "runswmm-rs"
+description = "EPA's runswmm command line over swmm5-rust: runswmm-rs <input file> <report file> [<output file>]"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "runswmm-rs"
+path = "src/main.rs"
+
+[dependencies]
+swmm5-rust = { path = "../engine" }
