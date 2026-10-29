@@ -7,3 +7,4 @@
 {"inp": "SWMM5_NCIMM/4190_Nodes.inp", "rc_ref": 0, "rc_test": 0, "t_ref": 394.3243, "t_test": 451.2724, "out_bytes": 18024014, "out_same": true, "out_sha": "3d7979317d39d8be", "rpt_same": true, "rpt_err": false, "rpt_bytes": 1518082}
 {"inp": "SWMM5_NCIMM/6469_Nodes.inp", "rc_ref": 0, "rc_test": 0, "t_ref": 421.5087, "t_test": 477.0053, "out_bytes": 177870, "out_same": true, "out_sha": "6cbd1d6fa2359434", "rpt_same": true, "rpt_err": false, "rpt_bytes": 3058688}
 {"inp": "SWMM5_NCIMM/669_Subs_4500_Nodes.inp", "rc_ref": 0, "rc_test": 0, "t_ref": 537.9753, "t_test": 606.617, "out_bytes": 162323202, "out_same": true, "out_sha": "d77fb6c01efc8542", "rpt_same": true, "rpt_err": false, "rpt_bytes": 1703703}
+{"inp": "SWMM5_NCIMM/6715_Nodes_400_Subs.inp", "rc_ref": 0, "rc_test": 0, "t_ref": 162.1191, "t_test": 189.5211, "out_bytes": 232206098, "out_same": true, "out_sha": "5218ca3ce00a68b6", "rpt_same": true, "rpt_err": false, "rpt_bytes": 2976045}
