@@ -359,3 +359,27 @@ def fig_timing(groups, title, sub):
             b.append(f'<circle cx="{X(r[1]):.1f}" cy="{y}" r="5" fill="{g["color"]}"/>')
     legend(b, 24, B + 40, [(g['color'], g['label']) for g in groups] + [('var(--f-soft)', 'noise floor: EPA timed twice')])
     return svg(W, H, ''.join(b), 'Run time relative to EPA')
+
+# ----------------------------------------------------------------- instruction counts, per function
+def fig_profile(m, top=10):
+    """m: one model from results/profile.json. Paired bars, EPA and swmm5-rust, for the functions with the most instructions."""
+    rows = [r for r in m['rows'] if not r['fn'].startswith('libm:')][:top]
+    W = 820; rh = 30; L, R, T = 230, 700, 76
+    H = T + rh * len(rows) + 54
+    mx = max(max(r['epa'], r['rs']) for r in rows)
+    X = lambda v: L + (R - L) * v / mx
+    name = m['model'].split('/')[-1][:-4]
+    b = [text(24, 28, f'Where the instructions go: {name}', 14, weight=600),
+         text(24, 46, f"callgrind instruction counts, millions. Whole run: EPA {m['epa_total'] / 1e9:.2f} billion, "
+                      f"swmm5-rust {m['rs_total'] / 1e9:.2f} billion ({100 * (m['ratio'] - 1):.0f}% more).", 11, 'var(--f-dim)')]
+    B = T + rh * len(rows)
+    for i, r in enumerate(rows):
+        y = T + i * rh
+        b.append(text(24, y + 17, r['fn'][:30], 11, family=MONO))
+        for k, (key, col) in enumerate((('epa', 'var(--epa)'), ('rs', 'var(--rs)'))):
+            v = r[key]; yy = y + 3 + k * 12
+            b.append(f'<rect x="{L}" y="{yy}" width="{max(1, X(v) - L):.1f}" height="10" fill="{col}" rx="1.5"/>')
+            b.append(text(X(v) + 6, yy + 9, f'{v / 1e6:,.0f}', 10, 'var(--f-dim)'))
+    b.append(f'<line x1="{L}" y1="{T - 4}" x2="{L}" y2="{B}" stroke="var(--f-line)"/>')
+    legend(b, 24, B + 30, [('var(--epa)', 'EPA 5.2.4 (gcc -O2)'), ('var(--rs)', 'swmm5-rust (rustc opt-level 2)')])
+    return svg(W, H, ''.join(b), 'Instruction counts by function, EPA against swmm5-rust')

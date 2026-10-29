@@ -369,6 +369,7 @@ footer.prov b{color:var(--ink)}
     <div class="card"><h2>Controls that ran</h2><div id="controls"></div></div>
     <div class="card"><h2>C's text routines, checked against glibc</h2><div class="figwrap" id="figCioV"></div></div>
     <div class="card" id="timingCard" hidden><h2>Run time, with the noise floor</h2><div class="figwrap" id="figTimingV"></div><div class="figwrap" style="margin-top:12px" id="figTimingW"></div></div>
+    <div class="card" id="profileCard" hidden><h2>Where the extra instructions go</h2><div class="figwrap" id="figProfileV"></div><p class="faint" style="margin:8px 0 0">Counted by callgrind, so the numbers do not depend on what else the machine was doing. The Doc tab's "What it costs" walks through them.</p></div>
     <div class="box warn" id="limitsBox"></div>
   </div>
 </section>
@@ -943,6 +944,7 @@ $('#figWasmV').innerHTML = D.figs.wasm; $('#figDecksV').innerHTML = D.figs.memde
 $('#wasmNote').textContent = (D.verify.wasmBad.length ? 'Models where swmm5-rust\'s WebAssembly output differs from EPA\'s: ' + D.verify.wasmBad.join(', ') + '. ' : '') +
   (D.verify.platBad.length ? 'Models where EPA\'s C differs from itself between native and WebAssembly: ' + D.verify.platBad.join(', ') + '.' : '');
 if (D.figs.timing) { $('#timingCard').hidden = false; $('#figTimingV').innerHTML = D.figs.timing; $('#figTimingW').innerHTML = D.figs.timing_wasm || ''; }
+if (D.figs.profile) { $('#profileCard').hidden = false; $('#figProfileV').innerHTML = D.figs.profile; }
 { const V = D.verify, li = a => a.length ? '<ul style="margin:4px 0 10px;padding-left:18px">' + a.map(x => `<li><code>${esc(x)}</code></li>`).join('') + '</ul>' : '<p class="muted" style="margin:4px 0 10px">none</p>';
   $('#notSame').innerHTML = `<p class="kicker">Different from EPA where EPA's behaviour is defined</p>${li(V.diffs)}<p class="kicker">Inconclusive: a run hit the time cap</p>${li(V.inc)}<p class="kicker">Undefined in C: the six decks of the smoke and coverage set</p><p class="muted" style="margin:4px 0 10px">IO-23_no-gages, CRASH-02_xsect-before-weir, CRASH-03_empty-curve, CRASH-04_quoted-shape, CRASH-08_expr-bad-option, CRASH-08_expr-duplicate-id</p><p class="kicker">Undefined in C: corpus models that crash EPA natively, or are one of the six</p>${li(V.ubCorpus)}`; }
 $('#controls').innerHTML = '<ul style="margin:0;padding-left:18px">' + D.verify.controls.map(c => `<li style="margin-bottom:6px">${c}</li>`).join('') + '</ul>';

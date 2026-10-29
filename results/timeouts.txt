@@ -1,0 +1,16 @@
+corpus1729/OWA_EXTRAN/longTS_extran1.inp
+corpus1729/SWMM5_NCIMM/1220_Nodes.inp
+corpus1729/SWMM5_NCIMM/12334_Nodes.inp
+corpus1729/SWMM5_NCIMM/2348_Nodes.inp
+corpus1729/SWMM5_NCIMM/235_Subs_RDII.inp
+corpus1729/SWMM5_NCIMM/23865_Nodes.inp
+corpus1729/SWMM5_NCIMM/3363_Nodes.inp
+corpus1729/SWMM5_NCIMM/4190_Nodes.inp
+corpus1729/SWMM5_NCIMM/6469_Nodes.inp
+corpus1729/SWMM5_NCIMM/669_Subs_4500_Nodes.inp
+corpus1729/SWMM5_NCIMM/6715_Nodes_400_Subs.inp
+corpus1729/SWMM5_NCIMM/8117_Nodes.inp
+corpus1729/SWMM5_NCIMM/8394_H&H_Elements.inp
+corpus1729/SWMM5_NCIMM/indy_small.inp
+corpus1729/SWMM5_NCIMM/oneyear_extran1.inp
+corpus1729/Simon_EPA/Session38_100_Control_Rules.inp

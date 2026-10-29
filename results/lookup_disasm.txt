@@ -1,0 +1,202 @@
+# xsect.c lookup(): EPA 5.2.4 (gcc -O2, ref/runswmm) and swmm5-rust (ref/runswmm-rs-gate), objdump -d
+# The float-to-int conversion: EPA one cvttsd2si; Rust maxsd..cmovbe (12 instructions: Rust's saturating 'as' plus ccast::f64_to_i32's range test)
+
+## EPA
+00000000000569f0 <lookup>:
+   569f0:	movapd %xmm0,%xmm1
+   569f4:	pxor   %xmm0,%xmm0
+   569f8:	movsd  0x8170(%rip),%xmm5        # 5eb70 <_IO_stdin_used+0x1b70>
+   56a00:	lea    -0x1(%rsi),%edx
+   56a03:	cvtsi2sd %esi,%xmm0
+   56a07:	movapd %xmm5,%xmm2
+   56a0b:	subsd  %xmm5,%xmm0
+   56a0f:	divsd  %xmm0,%xmm2
+   56a13:	movapd %xmm1,%xmm0
+   56a17:	divsd  %xmm2,%xmm0
+   56a1b:	cvttsd2si %xmm0,%eax
+   56a1f:	cmp    %eax,%edx
+   56a21:	jle    56ae0 <lookup+0xf0>
+   56a27:	pxor   %xmm7,%xmm7
+   56a2b:	movslq %eax,%rdx
+   56a2e:	movapd %xmm1,%xmm6
+   56a32:	cvtsi2sd %eax,%xmm7
+   56a36:	lea    0x0(,%rdx,8),%rcx
+   56a3e:	movsd  (%rdi,%rdx,8),%xmm4
+   56a43:	movsd  0x8(%rdi,%rcx,1),%xmm8
+   56a4a:	movapd %xmm8,%xmm3
+   56a4f:	movapd %xmm7,%xmm0
+   56a53:	subsd  %xmm4,%xmm3
+   56a57:	mulsd  %xmm2,%xmm0
+   56a5b:	subsd  %xmm0,%xmm6
+   56a5f:	mulsd  %xmm6,%xmm3
+   56a63:	divsd  %xmm2,%xmm3
+   56a67:	addsd  %xmm4,%xmm3
+   56a6b:	cmp    $0x1,%eax
+   56a6e:	jle    56a88 <lookup+0x98>
+   56a70:	pxor   %xmm1,%xmm1
+   56a74:	movapd %xmm3,%xmm0
+   56a78:	cmpltsd %xmm1,%xmm0
+   56a7d:	andnpd %xmm3,%xmm0
+   56a81:	ret
+   56a82:	nopw   0x0(%rax,%rax,1)
+   56a88:	movsd  0x8197(%rip),%xmm9        # 5ec28 <_IO_stdin_used+0x1c28>
+   56a91:	movsd  0x10(%rdi,%rcx,1),%xmm0
+   56a97:	addsd  %xmm5,%xmm7
+   56a9b:	mulsd  %xmm9,%xmm4
+   56aa0:	mulsd  %xmm9,%xmm0
+   56aa5:	subsd  %xmm8,%xmm4
+   56aaa:	addsd  %xmm4,%xmm0
+   56aae:	movapd %xmm7,%xmm4
+   56ab2:	mulsd  %xmm2,%xmm4
+   56ab6:	mulsd  %xmm2,%xmm2
+   56aba:	subsd  %xmm4,%xmm1
+   56abe:	mulsd  %xmm6,%xmm1
+   56ac2:	divsd  %xmm2,%xmm1
+   56ac6:	mulsd  %xmm1,%xmm0
+   56aca:	pxor   %xmm1,%xmm1
+   56ace:	addsd  %xmm3,%xmm0
+   56ad2:	comisd %xmm1,%xmm0
+   56ad6:	jbe    56a70 <lookup+0x80>
+   56ad8:	ret
+   56ad9:	nopl   0x0(%rax)
+   56ae0:	movslq %esi,%rsi
+   56ae3:	movsd  -0x8(%rdi,%rsi,8),%xmm0
+   56ae9:	ret
+   56aea:	nopw   0x0(%rax,%rax,1)
+
+## swmm5-rust
+00000000000b9570 <swmm5_rust::xsect::lookup>:
+   b9570:	cvtsi2sd %edx,%xmm1
+   b9574:	addsd  -0x931e4(%rip),%xmm1        # 26398 <anon.1902241e5f075a7aac150f9e8de26f07.69.llvm.12993369267409205808+0x4c3>
+   b957c:	movsd  -0x92e34(%rip),%xmm2        # 26750 <anon.d429628cde71b1969237edac4ed4b28a.93.llvm.11827875577333246201+0x2d0>
+   b9584:	divsd  %xmm1,%xmm2
+   b9588:	movapd %xmm0,%xmm1
+   b958c:	divsd  %xmm2,%xmm1
+   b9590:	movapd %xmm1,%xmm3
+   b9594:	maxsd  -0x92824(%rip),%xmm3        # 26d78 <anon.d429628cde71b1969237edac4ed4b28a.98.llvm.11827875577333246201+0x420>
+   b959c:	minsd  -0x92c1c(%rip),%xmm3        # 26988 <anon.d429628cde71b1969237edac4ed4b28a.98.llvm.11827875577333246201+0x30>
+   b95a4:	cvttsd2si %xmm3,%ecx
+   b95a8:	xor    %eax,%eax
+   b95aa:	ucomisd %xmm1,%xmm1
+   b95ae:	cmovnp %ecx,%eax
+   b95b1:	movsd  -0x92fa9(%rip),%xmm3        # 26610 <anon.d429628cde71b1969237edac4ed4b28a.93.llvm.11827875577333246201+0x190>
+   b95b9:	ucomisd %xmm1,%xmm3
+   b95bd:	mov    $0x80000000,%ecx
+   b95c2:	cmovbe %ecx,%eax
+   b95c5:	ucomisd -0x92c4d(%rip),%xmm1        # 26980 <anon.d429628cde71b1969237edac4ed4b28a.98.llvm.11827875577333246201+0x28>
+   b95cd:	cmovbe %ecx,%eax
+   b95d0:	dec    %edx
+   b95d2:	cmp    %edx,%eax
+   b95d4:	jge    b9613 <swmm5_rust::xsect::lookup+0xa3>
+   b95d6:	xorps  %xmm3,%xmm3
+   b95d9:	cvtsi2sd %eax,%xmm3
+   b95dd:	movapd %xmm2,%xmm5
+   b95e1:	mulsd  %xmm3,%xmm5
+   b95e5:	addsd  -0x92e9d(%rip),%xmm3        # 26750 <anon.d429628cde71b1969237edac4ed4b28a.93.llvm.11827875577333246201+0x2d0>
+   b95ed:	mulsd  %xmm2,%xmm3
+   b95f1:	mov    %eax,%ecx
+   b95f3:	test   %eax,%eax
+   b95f5:	js     b9625 <swmm5_rust::xsect::lookup+0xb5>
+   b95f7:	xorpd  %xmm1,%xmm1
+   b95fb:	cmp    %rcx,%rsi
+   b95fe:	jbe    b9605 <swmm5_rust::xsect::lookup+0x95>
+   b9600:	movsd  (%rdi,%rcx,8),%xmm1
+   b9605:	movapd %xmm0,%xmm4
+   b9609:	subsd  %xmm5,%xmm4
+   b960d:	lea    0x1(%rax),%r8d
+   b9611:	jmp    b963e <swmm5_rust::xsect::lookup+0xce>
+   b9613:	movslq %edx,%rax
+   b9616:	cmp    %rax,%rsi
+   b9619:	jbe    b9735 <swmm5_rust::xsect::lookup+0x1c5>
+   b961f:	movsd  (%rdi,%rax,8),%xmm0
+   b9624:	ret
+   b9625:	movapd %xmm0,%xmm4
+   b9629:	subsd  %xmm5,%xmm4
+   b962d:	xor    %r8d,%r8d
+   b9630:	mov    %eax,%edx
+   b9632:	xorpd  %xmm1,%xmm1
+   b9636:	xorpd  %xmm5,%xmm5
+   b963a:	inc    %edx
+   b963c:	jne    b96a8 <swmm5_rust::xsect::lookup+0x138>
+   b963e:	mov    %r8d,%edx
+   b9641:	xorpd  %xmm5,%xmm5
+   b9645:	cmp    %rdx,%rsi
+   b9648:	jbe    b964f <swmm5_rust::xsect::lookup+0xdf>
+   b964a:	movsd  (%rdi,%rdx,8),%xmm5
+   b964f:	test   %eax,%eax
+   b9651:	js     b96a2 <swmm5_rust::xsect::lookup+0x132>
+   b9653:	xorpd  %xmm6,%xmm6
+   b9657:	cmp    %rcx,%rsi
+   b965a:	jbe    b9661 <swmm5_rust::xsect::lookup+0xf1>
+   b965c:	movsd  (%rdi,%rcx,8),%xmm6
+   b9661:	subsd  %xmm6,%xmm5
+   b9665:	mulsd  %xmm4,%xmm5
+   b9669:	divsd  %xmm2,%xmm5
+   b966d:	addsd  %xmm5,%xmm1
+   b9671:	cmp    $0x1,%eax
+   b9674:	ja     b9722 <swmm5_rust::xsect::lookup+0x1b2>
+   b967a:	subsd  %xmm3,%xmm0
+   b967e:	mulsd  %xmm4,%xmm0
+   b9682:	mulsd  %xmm2,%xmm2
+   b9686:	divsd  %xmm2,%xmm0
+   b968a:	xorpd  %xmm2,%xmm2
+   b968e:	cmp    %rcx,%rsi
+   b9691:	jbe    b96d7 <swmm5_rust::xsect::lookup+0x167>
+   b9693:	movsd  (%rdi,%rcx,8),%xmm2
+   b9698:	mulsd  -0x92df0(%rip),%xmm2        # 268b0 <anon.d429628cde71b1969237edac4ed4b28a.93.llvm.11827875577333246201+0x430>
+   b96a0:	jmp    b96d7 <swmm5_rust::xsect::lookup+0x167>
+   b96a2:	mov    %r8d,%edx
+   b96a5:	mov    $0x1,%r8b
+   b96a8:	movapd %xmm1,%xmm6
+   b96ac:	mulsd  %xmm4,%xmm5
+   b96b0:	divsd  %xmm2,%xmm5
+   b96b4:	movapd %xmm5,%xmm1
+   b96b8:	addsd  %xmm6,%xmm1
+   b96bc:	subsd  %xmm3,%xmm0
+   b96c0:	mulsd  %xmm4,%xmm0
+   b96c4:	mulsd  %xmm2,%xmm2
+   b96c8:	divsd  %xmm2,%xmm0
+   b96cc:	xorpd  %xmm2,%xmm2
+   b96d0:	test   %r8b,%r8b
+   b96d3:	je     b96e7 <swmm5_rust::xsect::lookup+0x177>
+   b96d5:	mov    %edx,%edx
+   b96d7:	xorpd  %xmm3,%xmm3
+   b96db:	cmp    %rdx,%rsi
+   b96de:	jbe    b96eb <swmm5_rust::xsect::lookup+0x17b>
+   b96e0:	movsd  (%rdi,%rdx,8),%xmm3
+   b96e5:	jmp    b96eb <swmm5_rust::xsect::lookup+0x17b>
+   b96e7:	xorpd  %xmm3,%xmm3
+   b96eb:	subsd  %xmm3,%xmm2
+   b96ef:	xorpd  %xmm3,%xmm3
+   b96f3:	xorpd  %xmm4,%xmm4
+   b96f7:	cmp    $0xfffffffe,%eax
+   b96fa:	jl     b970c <swmm5_rust::xsect::lookup+0x19c>
+   b96fc:	cltq
+   b96fe:	movsd  0x10(%rdi,%rax,8),%xmm4
+   b9704:	mulsd  -0x92e5c(%rip),%xmm4        # 268b0 <anon.d429628cde71b1969237edac4ed4b28a.93.llvm.11827875577333246201+0x430>
+   b970c:	addsd  %xmm4,%xmm2
+   b9710:	mulsd  %xmm2,%xmm0
+   b9714:	addsd  %xmm1,%xmm0
+   b9718:	ucomisd %xmm3,%xmm0
+   b971c:	jbe    b9722 <swmm5_rust::xsect::lookup+0x1b2>
+   b971e:	movapd %xmm0,%xmm1
+   b9722:	xorpd  %xmm0,%xmm0
+   b9726:	ucomisd %xmm1,%xmm0
+   b972a:	jbe    b9730 <swmm5_rust::xsect::lookup+0x1c0>
+   b972c:	xorpd  %xmm1,%xmm1
+   b9730:	movapd %xmm1,%xmm0
+   b9734:	ret
+   b9735:	push   %rax
+   b9736:	lea    0xb0fbb(%rip),%rdx        # 16a6f8 <anon.6ad1a8c79e4b44eedba79a8d6320d63b.198.llvm.2248907676320452087+0x48>
+   b973d:	mov    %rax,%rdi
+   b9740:	call   *0xbb8c2(%rip)        # 175008 <_DYNAMIC+0x2c8>
+   b9746:	int3
+   b9747:	int3
+   b9748:	int3
+   b9749:	int3
+   b974a:	int3
+   b974b:	int3
+   b974c:	int3
+   b974d:	int3
+   b974e:	int3
+   b974f:	int3

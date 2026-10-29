@@ -15,6 +15,7 @@ ap.add_argument('ref'); ap.add_argument('test'); ap.add_argument('corpus'); ap.a
 ap.add_argument('--timeout', type=float, default=60)
 ap.add_argument('--jobs', type=int, default=2)
 ap.add_argument('--list')
+ap.add_argument('--mem', type=float, default=3, help='address-space cap per run, GiB (0: none)')
 a = ap.parse_args()
 a.ref = os.path.abspath(a.ref); a.test = os.path.abspath(a.test); a.corpus = os.path.abspath(a.corpus)
 
@@ -27,7 +28,8 @@ def sha(b):
     return hashlib.sha256(b).hexdigest()[:16]
 
 def limits():
-    resource.setrlimit(resource.RLIMIT_AS, (3 << 30, 3 << 30))      # 3 GiB address space
+    if a.mem > 0:                                                    # address space (default 3 GiB)
+        n = int(a.mem * (1 << 30)); resource.setrlimit(resource.RLIMIT_AS, (n, n))
     resource.setrlimit(resource.RLIMIT_FSIZE, (2 << 30, 2 << 30))   # 2 GiB per file
 
 def file_digest(path, normalize=False):

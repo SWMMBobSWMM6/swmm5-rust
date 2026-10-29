@@ -1,0 +1,29 @@
+warm-up done
+rep 1 done
+rep 2 done
+rep 3 done
+rep 4 done
+rep 5 done
+375_H&H_Elements (1)               EPA    5010 ms  C++/EPA 0.913  Rust/EPA 1.177  floor 0.949 {"rs":true,"cp":true,"epa2":true}
+MAYBR                              EPA    6566 ms  C++/EPA 0.946  Rust/EPA 1.200  floor 0.980 {"rs":true,"cp":true,"epa2":true}
+46_Subs                            EPA    2973 ms  C++/EPA 1.016  Rust/EPA 1.381  floor 1.002 {"rs":true,"cp":true,"epa2":true}
+10_Subs_Continuous                 EPA     995 ms  C++/EPA 1.018  Rust/EPA 1.370  floor 1.032 {"rs":true,"cp":true,"epa2":true}
+lid1d                              EPA    4668 ms  C++/EPA 0.965  Rust/EPA 1.281  floor 1.021 {"rs":true,"cp":true,"epa2":true}
+Exercise5_transect                 EPA    9371 ms  C++/EPA 1.101  Rust/EPA 1.379  floor 0.973 {"rs":true,"cp":true,"epa2":true}
+Peter Klaver_WQ_Tracer             EPA    5950 ms  C++/EPA 0.597  Rust/EPA 1.188  floor 0.946 {"rs":true,"cp":true,"epa2":true}
+short_trap_SW5                     EPA    6510 ms  C++/EPA 1.046  Rust/EPA 1.155  floor 0.990 {"rs":true,"cp":true,"epa2":true}
+429_H&H_Elements                   EPA    5521 ms  C++/EPA 0.974  Rust/EPA 1.415  floor 0.992 {"rs":true,"cp":true,"epa2":true}
+manifold_pumps                     EPA    1196 ms  C++/EPA 0.913  Rust/EPA 1.408  floor 0.984 {"rs":true,"cp":true,"epa2":true}
+exam79                             EPA      36 ms  C++/EPA 1.019  Rust/EPA 1.344  floor 0.977 {"rs":true,"cp":true,"epa2":true}
+controlExample                     EPA     408 ms  C++/EPA 1.040  Rust/EPA 1.612  floor 1.013 {"rs":true,"cp":true,"epa2":true}
+{
+ "rs_median": 1.3573134462435876,
+ "cp_median": 0.9949101438964449,
+ "rs_geo": 1.3200507712817764,
+ "cp_geo": 0.9526306401381268,
+ "floor_dev": 0.05444036731873192,
+ "reps": 5,
+ "models": 12,
+ "all_identical": true,
+ "measure": "wall milliseconds in one node process (V8 12.4.254.21-node.57), median of reps"
+}

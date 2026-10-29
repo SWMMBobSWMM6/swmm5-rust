@@ -1,0 +1,1 @@
+{"inp": "Hydrology/sewer_rdii_problem.inp", "rc_ref": 0, "rc_test": 0, "t_ref": 8.8011, "t_test": 13.1347, "out_bytes": 19966686, "out_same": true, "out_sha": "172c6d8d4186a058", "rpt_same": true, "rpt_err": false, "rpt_bytes": 26335}

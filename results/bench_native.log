@@ -1,0 +1,28 @@
+rep 1 done
+rep 2 done
+rep 3 done
+rep 4 done
+rep 5 done
+375_H&H_Elements (1)               EPA   4.030s  C++/EPA 0.960  Rust/EPA 1.075  floor 1.014  same {'rs': True, 'cp': True, 'epa2': True}
+MAYBR                              EPA   4.829s  C++/EPA 0.975  Rust/EPA 1.138  floor 0.998  same {'rs': True, 'cp': True, 'epa2': True}
+46_Subs                            EPA   2.410s  C++/EPA 0.941  Rust/EPA 1.189  floor 1.027  same {'rs': True, 'cp': True, 'epa2': True}
+10_Subs_Continuous                 EPA   0.774s  C++/EPA 0.931  Rust/EPA 1.142  floor 0.990  same {'rs': True, 'cp': True, 'epa2': True}
+lid1d                              EPA   3.864s  C++/EPA 0.812  Rust/EPA 1.042  floor 0.875  same {'rs': True, 'cp': True, 'epa2': True}
+Exercise5_transect                 EPA   6.522s  C++/EPA 0.996  Rust/EPA 1.270  floor 1.021  same {'rs': True, 'cp': True, 'epa2': True}
+Peter Klaver_WQ_Tracer             EPA   4.323s  C++/EPA 0.510  Rust/EPA 1.085  floor 0.990  same {'rs': True, 'cp': True, 'epa2': True}
+short_trap_SW5                     EPA   4.721s  C++/EPA 0.982  Rust/EPA 1.093  floor 1.029  same {'rs': True, 'cp': True, 'epa2': True}
+429_H&H_Elements                   EPA   4.548s  C++/EPA 0.903  Rust/EPA 1.116  floor 0.995  same {'rs': True, 'cp': True, 'epa2': True}
+manifold_pumps                     EPA   1.095s  C++/EPA 0.872  Rust/EPA 0.984  floor 0.966  same {'rs': True, 'cp': True, 'epa2': True}
+exam79                             EPA   0.030s  C++/EPA 0.823  Rust/EPA 1.133  floor 0.987  same {'rs': True, 'cp': True, 'epa2': True}
+controlExample                     EPA   0.309s  C++/EPA 0.946  Rust/EPA 1.422  floor 1.003  same {'rs': True, 'cp': True, 'epa2': True}
+{
+ "rs_median": 1.1244515582370231,
+ "cp_median": 0.9358565707436453,
+ "rs_geo": 1.1359109817192532,
+ "cp_geo": 0.8757181694567178,
+ "floor_dev": 0.12461701873250086,
+ "reps": 5,
+ "models": 12,
+ "all_identical": true,
+ "measure": "child user+system CPU seconds, median of reps"
+}

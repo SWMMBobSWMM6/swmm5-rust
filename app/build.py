@@ -75,6 +75,7 @@ UB = {'IO-23_no-gages.inp', 'CRASH-02_xsect-before-weir.inp', 'CRASH-03_empty-cu
 def classify(r):
     n = r['inp'].split('/')[-1]
     if str(r.get('rc_ref')) == 'timeout' or str(r.get('rc_test')) == 'timeout': return 'inc'
+    if r.get('rc_ref') in (-9, -25) or r.get('rc_test') in (-9, -25): return 'inc'   # killed at the gate's memory or file-size cap
     if r['out_same'] and r['rpt_same']: return 'same'
     if n in UB: return 'ub'
     # EPA killed by a signal (SIGSEGV, SIGABRT): its C touched memory it does not own, so there is no EPA answer.
@@ -92,13 +93,25 @@ def tally(rows):
     c = collections.Counter(classify(r) for r in rows)
     return dict(n=len(rows), same=c['same'], ub=c['ub'], diff=c['diff'], inc=c['inc'])
 RERUN = {r['inp']: r for r in jl(f'{RES}/rs_timeouts_rerun.jsonl')}   # timeouts rerun alone with a long cap
-def merged(rows): return [RERUN.get(r['inp'], r) if classify(r) == 'inc' else r for r in rows]
+# models that SAVE or USE interface files, rerun one at a time: run in parallel, two runs can write or
+# read the same file in the model's folder at once (the 1000-year decks share 1000_Year_Rainfall.rff)
+SERIAL = {r['inp']: r for r in jl(f'{RES}/rs_interface_serial.jsonl')}
+# models that ask for more than the gate's 3 GiB address-space cap, rerun without it: under the cap EPA's checked
+# calloc reports ERROR 101 and the Rust stops with "memory allocation failed" (a departure listed in the README)
+MEMCAP = {r['inp']: r for r in jl(f'{RES}/rs_memcap_rerun.jsonl')}
+def merged(rows): return [MEMCAP[r['inp']] if r['inp'] in MEMCAP else SERIAL[r['inp']] if r['inp'] in SERIAL
+                          else RERUN.get(r['inp'], r) if classify(r) == 'inc' else r for r in rows]
 g221 = merged(jl(f'{RES}/rs_221_v2.jsonl')); T221 = tally(g221)
+# the binary built from the engine as it stands, on the 221 set and every other gated model with control rules
+ghc = jl(f'{RES}/rs_head_check.jsonl'); THC = tally(ghc); N_HC = sum(1 for l in open(f'{RES}/head_check.txt') if l.strip())
+HC_DIFF = sorted(r['inp'] for r in ghc if classify(r) == 'diff')
 gfc = merged(jl(f'{RES}/rs_filled68.jsonl')); TFC = tally(gfc)
 gco = merged(jl(f'{RES}/rs_corpus.jsonl')); TCO = tally(gco)
 UB_CORPUS = sorted({r['inp'].split('/')[-1] for r in gco if classify(r) == 'ub'})
-DIFF_LIST = sorted({r['inp'] for r in g221 + gfc + gco if classify(r) == 'diff'})
-INC_LIST = sorted({r['inp'] for r in g221 + gfc + gco if classify(r) == 'inc'})
+DIFF_LIST = sorted({r['inp'] for r in g221 + gfc + gco + ghc if classify(r) == 'diff'})
+INC_LIST = sorted({r['inp'] for r in g221 + gfc + gco + ghc if classify(r) == 'inc'})
+INC_WHY = {'IO-02_end-time-1e30.inp': 'IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA\'s own run does not end; not rerun'}
+def inc_note(x): w = INC_WHY.get(x.split('/')[-1]); return f'{x} ({w})' if w else x
 N_FC = sum(1 for l in open(f'{RES}/filled68.txt') if l.strip())
 N_CO = sum(1 for l in open(f'{RES}/corpus_set.txt') if l.strip())
 diffs_all = [r['inp'] for r in g221 + gfc + gco if classify(r) == 'diff']
@@ -207,6 +220,17 @@ GATE_CO_STATE = ('' if TCO['n'] >= N_CO else ' (still running when this was buil
 NUM['CO_STATE'] = GATE_CO_STATE
 NUM['FC_RESULT'] = (f"{TFC['same']} of {TFC['n']} identical" + (f", {TFC['inc']} inconclusive (both runs hit the time cap)" if TFC['inc'] else '') + (f", {TFC['diff']} different" if TFC['diff'] else ', none different')
                     + ('' if TFC['n'] >= N_FC else f" ({TFC['n']} of {N_FC} run when this was built)"))
+_TO = jl(f'{RES}/rs_timeouts_rerun.jsonl')
+if _TO:
+    _tt = tally(_TO); _nto = sum(1 for l in open(f'{RES}/timeouts.txt') if l.strip()) if os.path.exists(f'{RES}/timeouts.txt') else _tt['n']
+    NUM['TO_RESULT'] = ((f"all {_nto} rerun" if _tt['n'] >= _nto else f"{_tt['n']} of {_nto} rerun when this was built") + f", {_tt['same']} identical"
+                        + (f", {_tt['diff']} different" if _tt['diff'] else ', none different')
+                        + (f", {_tt['inc']} still running past the hour" if _tt['inc'] else ''))
+if ghc:
+    NUM['HC_RESULT'] = ((f"all {N_HC} run" if THC['n'] >= N_HC else f"{THC['n']} of {N_HC} run when this was built") + f", {THC['same']} identical"
+                        + (f", {THC['ub']} undefined in C" if THC['ub'] else '') + (f", {THC['diff']} different" if THC['diff'] else ', none different')
+                        + (f", {THC['inc']} inconclusive at the time cap" if THC['inc'] else ''))
+    NUM['NHC'] = N_HC
 NUM['CO_DONE'] = 'all' if TCO['n'] >= N_CO else f"{TCO['n']:,} of the"
 NUM['CORPUS_RESULT'] = (f"all {N_CO:,} run, {TCO['same']:,} identical" + (f", {TCO['ub']} undefined in C" if TCO['ub'] else '') + (f", {TCO['diff']} different" if TCO['diff'] else '') + (f", {TCO['inc']} inconclusive at the time cap" if TCO['inc'] else '')
                         if TCO['n'] >= N_CO else f"{TCO['n']:,} run when this was built, {TCO['same']:,} of them identical" if TCO['n'] else "still running when this was built")
@@ -217,6 +241,93 @@ if bench_w:
     NUM.update(dict(TW_RS=f"{bench_w['summary']['rs_median']:.2f}", TW_CP=f"{bench_w['summary']['cp_median']:.2f}",
                     TW_FLOOR=f"±{100 * bench_w['summary']['floor_dev']:.0f}%"))
 if not bench_n: NUM['NO_TIMING'] = ''
+_NW = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
+def _nw(n): return _NW[n] if n < len(_NW) else str(n)
+def against_noise(rows, key):
+    """per model: slower or faster than EPA by more than EPA differs from itself on that model, or inside that noise"""
+    c = collections.Counter()
+    for r in rows:
+        noise = abs(r['floor'] - 1)
+        c['slower' if r[key] - 1 > noise else 'faster' if 1 - r[key] > noise else 'noise'] += 1
+    return c
+def speed_words(med):
+    return f'{100 * (med - 1):.0f} percent longer' if med > 1 else f'{100 * (1 - med):.0f} percent shorter'
+def noise_clause(c, n):
+    parts = []
+    if c['slower']: parts.append(f"on {'all ' + _nw(n) if c['slower'] == n else _nw(c['slower']) + ' of the ' + _nw(n)} it is slower by more than EPA differs from itself on the same model")
+    if c['faster']: parts.append(f"on {_nw(c['faster'])} it is faster by more than that")
+    if c['noise']: parts.append(f"on {_nw(c['noise'])} the difference is inside that noise")
+    return '; '.join(parts)
+if bench_n:
+    _rows = bench_n['rows']; _N = len(_rows); _m = bench_n['summary']['rs_median']
+    _c = against_noise(_rows, 'rs'); _rs = [r['rs'] for r in _rows]
+    _noisiest = max(_rows, key=lambda r: abs(r['floor'] - 1))
+    NUM['SPEED_NATIVE'] = speed_words(_m)
+    NUM['T_TEXT'] = (f"Natively, over {_nw(_N)} models, swmm5-rust's median run time is {NUM['T_RS']} times EPA's, {NUM['SPEED_NATIVE']}. "
+                     f"Model by model the ratio runs from {min(_rs):.2f} to {max(_rs):.2f}; {noise_clause(_c, _N)}. The noisiest model, "
+                     f"<code>{html.escape(_noisiest['model'])}</code>, differs from itself by {100 * abs(_noisiest['floor'] - 1):.0f} percent between "
+                     f"two runs of EPA, so a single ratio means little without its own floor. swmm5-cplus, built with link-time "
+                     f"optimisation, comes in at a median of {NUM['T_CP']}.")
+    if _c['slower'] > _N / 2:
+        NUM['LIMIT_SPEED'] = (f"It is not faster than the C. Natively its median run time is {NUM['SPEED_NATIVE']} than EPA's, and it is slower "
+                              f"beyond the noise on {_nw(_c['slower'])} of the {_nw(_N)} models timed.")
+    elif _c['faster'] > _N / 2:
+        NUM['LIMIT_SPEED'] = (f"Natively its median run time came out {NUM['SPEED_NATIVE']} than EPA's on {_nw(_N)} models; that is a measurement "
+                              f"on those models, not a promise for others, and nobody has traced why.")
+    else:
+        NUM['LIMIT_SPEED'] = (f"It is no faster than the C: on most of the {_nw(_N)} models timed the difference is inside the noise.")
+else:
+    NUM['LIMIT_SPEED'] = 'Its speed had not been measured when this was built.'
+if bench_w:
+    _cw = against_noise(bench_w['rows'], 'rs'); _Nw = len(bench_w['rows'])
+    NUM['SPEED_WASM'] = speed_words(bench_w['summary']['rs_median'])
+    NUM['TW_TEXT'] = (f"In WebAssembly, run in node, swmm5-rust's median is {NUM['TW_RS']} times EPA's, {NUM['SPEED_WASM']}, and "
+                      f"swmm5-cplus's is {NUM['TW_CP']}; {noise_clause(_cw, _Nw)}. The browser is a different machine, with its own "
+                      f"compiler between the WebAssembly and the processor, so the two sets of ratios need not agree.")
+prof = J(f'{RES}/profile.json')
+def _words(n): return ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
+                        'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'][n] if n < 20 else f'{n:,}'
+def _big(n): return f"{n / 1e9:.2f} billion" if n >= 1e9 else f"{n / 1e6:,.0f} million"
+if prof:
+    _sh = []; _none = []
+    for _m in prof['models'][1:]:
+        _r = next((r for r in _m['rows'] if r['fn'] == 'lookup' and r['epa_calls']), None)
+        if _r: _sh.append(f"{100 * (_r['rs'] - _r['epa']) / (_m['rs_total'] - _m['epa_total']):.0f}")
+        else: _none.append(_m['model'].split('/')[-1])
+    _w = ['', 'one', 'two', 'three', 'four', 'five']
+    NUM['P_LOOKUP_OTHER'] = ((' and '.join([', '.join(_sh[:-1]), _sh[-1]] if len(_sh) > 1 else _sh) + ' percent on ' + _w[len(_sh)] + ' of the others')
+                             + (f"; <code>{_none[0]}</code>, a water-quality model, never calls it" if len(_none) == 1 else '')) if _sh else ''
+    _pm = prof['models'][0]
+    _lk = next(r for r in _pm['rows'] if r['fn'] == 'lookup')
+    _both = [(r, m) for m in prof['models'] for r in m['rows'] if r['epa_calls'] and r['rs_calls'] and not r['lib']]
+    _fnboth = sorted({r['fn'] for r, m in _both})
+    _fnsame = [f for f in _fnboth if all(r['epa_calls'] == r['rs_calls'] for r, m in _both if r['fn'] == f)]
+    # the prose explains the exceptions (small functions inlined at different call sites by the two
+    # compilers; the caller lists in profile.json show where); if the data ever shows another one, stop and look
+    _INLINED = {'datetime_addSeconds', 'datetime_dayOfYear', 'findmatch', 'getDouble', 'infil_setInfilFactor', 'link_getYcrit',
+                'link_setFlapGate', 'node_setParams', 'project_findObject', 'report_writeLine', 'strcomp'}
+    assert set(_fnboth) - set(_fnsame) <= _INLINED, set(_fnboth) - set(_fnsame) - _INLINED
+    for _m in prof['models']:       # link_getYcrit is a wrapper: what it wraps is called equally often
+        _yc = next((r for r in _m['rows'] if r['fn'] == 'xsect_getYcrit'), None)
+        assert _yc is None or _yc['epa_calls'] == _yc['rs_calls'], _m['model']
+    _al = max(prof['models'], key=lambda m: next((r['rs_calls'] for r in m['rows'] if r['fn'] == 'malloc'), 0))   # the most allocations
+    _mal = next(r for r in _al['rows'] if r['fn'] == 'malloc'); _osr = next(r for r in _al['rows'] if r['fn'] == 'output_saveResults')
+    _wal = sum(e[3] for e in _al['edges'] if e[0] == 'write_real4s' and e[1].endswith('__rust_alloc'))
+    NUM.update(dict(P2_MODEL=f"<code>{_al['model'].split('/')[-1]}</code>", P2_ALLOC_RS=f"{_mal['rs_calls']:,}", P2_ALLOC_EPA=f"{_mal['epa_calls']:,}",
+                    P2_ALLOC_W=f"{_wal:,}",
+                    P2_OUT_EPA=_big(_osr['epa_incl']), P2_OUT_RS=_big(_osr['rs_incl']),
+                    P2_SHARE=f"{100 * (_osr['rs_incl'] - _osr['epa_incl']) / (_al['rs_total'] - _al['epa_total']):.0f} percent",
+                    P_DIFFN=_words(len(_fnboth) - len(_fnsame))))
+    _rat = [m['ratio'] for m in prof['models']]
+    NUM.update(dict(
+        P_N=['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'][len(prof['models'])] if len(prof['models']) < 10 else len(prof['models']), P_MODEL=f"<code>{_pm['model'].split('/')[-1]}</code>",
+        P_EPA=f"{_pm['epa_total'] / 1e9:.2f} billion", P_RS=f"{_pm['rs_total'] / 1e9:.2f} billion",
+        P_RANGE=(f"{100 * (min(_rat) - 1):.0f} to {100 * (max(_rat) - 1):.0f} percent" if round(100 * (min(_rat) - 1)) != round(100 * (max(_rat) - 1)) else f"{100 * (min(_rat) - 1):.0f} percent"),
+        P_BOTH=len(_fnboth), P_SAMECALLS=('all' if len(_fnsame) == len(_fnboth) else str(len(_fnsame))),
+        P_LOOKUP_SHARE=f"{100 * (_lk['rs'] - _lk['epa']) / (_pm['rs_total'] - _pm['epa_total']):.0f} percent",
+        P_LOOKUP_CALLS=f"{_lk['epa_calls']:,}", P_LOOKUP_EPA=f"{_lk['epa'] / _lk['epa_calls']:.1f}", P_LOOKUP_RS=f"{_lk['rs'] / _lk['rs_calls']:.1f}",
+        P_LOOKUP_EXTRA=f"{(_lk['rs'] - _lk['epa']) / _lk['rs_calls']:.1f}"))
+    assert _lk['epa_calls'] == _lk['rs_calls']
 def sub(s):
     return re.sub(r'\{([A-Z0-9_]+)\}', lambda m: str(NUM[m.group(1)]) if m.group(1) in NUM else m.group(0), s)
 
@@ -231,6 +342,21 @@ def func(path, sig):
         if '{' in L[k]: started = True
         if started and depth <= 0: return '\n'.join(L[i:k + 1]), i + 1
     raise SystemExit('unterminated ' + sig)
+if prof and bench_n:
+    _bt = {r['path'].split('/')[-1]: r for r in bench_n['rows']}
+    _both = [(m, _bt[m['model'].split('/')[-1]]) for m in prof['models'] if m['model'].split('/')[-1] in _bt]
+    if _both:
+        def _tw(r):
+            t = f"{100 * (r['rs'] - 1):.0f} percent more time" if r['rs'] >= 1 else f"{100 * (1 - r['rs']):.0f} percent less time"
+            return t + (", inside that model's noise" if abs(r['rs'] - 1) <= abs(r['floor'] - 1) else '')
+        _items = [f"<code>{html.escape(m['model'].split('/')[-1])}</code>, {100 * (m['ratio'] - 1):.0f} percent more instructions and {_tw(r)}"
+                  for m, r in _both]
+        _less = all(r['rs'] < m['ratio'] for m, r in _both)
+        NUM['P_VS_T'] = (f"An instruction count is not a run time; it leaves out cache misses and mispredicted branches, and a "
+                         f"processor runs several simple instructions at once. The {_nw(len(_both))} profiled models were timed too: "
+                         + '; '.join(_items) + '.' + (" On every one the clock grew less than the count." if _less else ''))
+NUM.setdefault('P_VS_T', 'And an instruction count is not a run time: it leaves out cache misses and mispredicted branches.')
+if prof: NUM['P_LOOKUP_LINES'] = len(func(f'{EPA_SRC}/xsect.c', 'double lookup(double x, double *table, int nItems)')[0].split('\n'))
 def excerpt(path, anchor, before, after):
     L = rd(path).split('\n')
     i = next(k for k, l in enumerate(L) if anchor in l)
@@ -354,6 +480,7 @@ if bench_n:
                                    dict(label=f'swmm5-cplus / EPA, median {bench_n["summary"]["cp_median"]:.2f}', color='var(--cpp)', rows=[(r['model'], r['cp'], r['floor']) for r in bench_n['rows']])],
                                   'Native run time against EPA 5.2.4 (all three built with optimization level 2)',
                                   f'Median of {bench_n["summary"]["reps"]} interleaved runs per model: EPA, C++, Rust, EPA again. Grey: the EPA-against-EPA noise floor.')
+if prof: FIGS['profile'] = F.fig_profile(prof['models'][0])
 if bench_w:
     FIGS['timing_wasm'] = F.fig_timing([dict(label=f'swmm5-rust / EPA, median {bench_w["summary"]["rs_median"]:.2f}', color='var(--rs)', rows=[(r['model'], r['rs'], r['floor']) for r in bench_w['rows']]),
                                         dict(label=f'swmm5-cplus / EPA, median {bench_w["summary"]["cp_median"]:.2f}', color='var(--cpp)', rows=[(r['model'], r['cp'], r['floor']) for r in bench_w['rows']])],
@@ -475,7 +602,7 @@ data = dict(samples=samples, figs=FIGS, insideTiles=tiles_inside, repr=repr_rows
             deckMatrix=[{k: v for k, v in r.items() if k != 'text'} for r in deck_rows],
             lid={k: dict(err=v['err'], rc=v['rc'], out_sha=v['out_sha']) for k, v in LID.items()},
             verify=dict(parity=parity, tiles=verify_tiles, controls=controls, limits=limits, csv=gate_csv,
-                        wasmBad=w_rs_bad, platBad=w_plat_bad, ubCorpus=UB_CORPUS, diffs=DIFF_LIST, inc=INC_LIST),
+                        wasmBad=w_rs_bad, platBad=w_plat_bad, ubCorpus=UB_CORPUS, diffs=DIFF_LIST, inc=[inc_note(x) for x in INC_LIST]),
             prov=prov, commit=gate_commit, essayHtml=essay_html, toc=toc, stats=ST)
 
 DOCX = f'{HERE}/doc/out/swmm5-rust-doc.docx'
@@ -507,3 +634,37 @@ with open(f'{REPO}/docs/DEFECTS.md', 'w') as fo:
     for d in defects:
         fo.write(f"## {d['id']}: {md(d['title'])}\n\n*Status: {d['status']}. Where: {d['where']}.*\n\n{md(d['body'])}\n\n{md(d.get('also', ''))}\n\n```c\n{d['code']}\n```\n\n")
 print('wrote docs/DEFECTS.md')
+
+# ------------------------------------------------------------------ README results section, and dist/
+def row(name, t, n_list):
+    return f"| {name} | {t['n']:,}{'' if t['n'] >= n_list else f' of {n_list:,} (running)'} | {t['same']:,} | {t['ub']} | {t['diff']} | {t['inc']} |\n"
+res_md = ('Written by `app/build.py` from `results/`; the app\'s Verify tab and the Doc essay are built from the same files.\n\n'
+          '| Gate (EPA 5.2.4 as reference) | Models | Identical | Undefined in C | Different | Inconclusive |\n|---|---|---|---|---|---|\n'
+          + row('Native: smoke and coverage set', T221, 221) + row('Native: every corpus model with FILLED_CIRCULAR', TFC, N_FC)
+          + row(f'Native: corpus set ({N_CO:,} models)', TCO, N_CO)
+          + (row('Native, engine as it stands: the 221 set and every other gated model with control rules', THC, N_HC) if ghc else '')
+          + f"| WebAssembly: swmm5-rust vs EPA, same libc | {WN_ALL}{'' if WN_ALL >= 221 else ' of 221 (running)'} | {WS['rs']} | {W_UB} | {WN - WS['rs']} | 0 |\n"
+          + f"| WebAssembly: swmm5-cplus vs EPA (for reference) | {WN_ALL} | {WS['cp']} | {W_UB} | {WN - WS['cp']} | 0 |\n"
+          + f"| Platform control: EPA wasm vs EPA native | {WN_ALL} | {WS['plat']} | {W_UB} | {WN - WS['plat']} | 0 |\n\n"
+          '"Identical" means the `.out` file byte for byte and the `.rpt` byte for byte after removing the three wall-clock lines. '
+          '"Undefined in C": EPA reads or writes memory it does not own (an explicit list of decks, plus any model that crashes EPA with a signal); '
+          'see docs/DEFECTS.md. "Inconclusive": a run hit the time or memory cap.\n')
+if DIFF_LIST: res_md += '\nDifferent: ' + ', '.join(f'`{x}`' for x in DIFF_LIST) + '\n'
+if INC_LIST: res_md += '\nInconclusive: ' + ', '.join(f'`{x}`' + (f' ({INC_WHY[x.split("/")[-1]]})' if x.split('/')[-1] in INC_WHY else '') for x in INC_LIST) + '\n'
+if bench_n: res_md += (f"\nNative run time over {bench_n['summary']['models']} models (`tools/bench3.py`, CPU seconds, median of {bench_n['summary']['reps']} interleaved runs of EPA, C++, Rust, EPA): "
+                       f"swmm5-rust {bench_n['summary']['rs_median']:.2f}× EPA at the median, swmm5-cplus {bench_n['summary']['cp_median']:.2f}×; "
+                       f"{noise_clause(against_noise(bench_n['rows'], 'rs'), len(bench_n['rows']))} (Rust).\n")
+if prof: res_md += ("\nInstruction counts (callgrind, `tools/profile.py`, results/profile.json): swmm5-rust executes " +
+                    ', '.join(f"{100 * (m['ratio'] - 1):.0f}% more on `{m['model'].split('/')[-1]}`" for m in prof['models']) +
+                    f" than EPA. On `{prof['models'][0]['model'].split('/')[-1]}` {NUM['P_LOOKUP_SHARE']} of the extra is in xsect.c's `lookup()`"
+                    f" ({NUM['P_LOOKUP_EPA']} instructions a call in EPA, {NUM['P_LOOKUP_RS']} in swmm5-rust, {NUM['P_LOOKUP_CALLS']} calls in each).\n")
+if bench_w: res_md += (f"\nWebAssembly run time in node over {bench_w['summary']['models']} models (`app/bench_wasm.js`): swmm5-rust {bench_w['summary']['rs_median']:.2f}× EPA at the median, "
+                       f"swmm5-cplus {bench_w['summary']['cp_median']:.2f}×; {noise_clause(against_noise(bench_w['rows'], 'rs'), len(bench_w['rows']))} (Rust).\n")
+rd_ = open(f'{REPO}/README.md').read()
+rd_ = re.sub(r'<!-- RESULTS -->.*?<!-- /RESULTS -->', lambda m: '<!-- RESULTS -->\n' + res_md + '<!-- /RESULTS -->', rd_, flags=re.S)
+open(f'{REPO}/README.md', 'w').write(rd_)
+os.makedirs(f'{REPO}/dist', exist_ok=True)
+import shutil
+shutil.copy(f'{REPO}/build/app/swmm5-rust.html', f'{REPO}/dist/swmm5-rust.html')
+if os.path.exists(DOCX): shutil.copy(DOCX, f'{REPO}/dist/swmm5-rust-doc.docx')
+print('wrote README results and dist/')

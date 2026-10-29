@@ -1,0 +1,65 @@
+3759 models, 0 done, 3759 to run
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-08-rule-expression-freed-after-input-error/CRASH-08_expr-duplicate-id.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-08-rule-expression-freed-after-input-error/CRASH-08_expr-bad-option.inp None
+DIFF OpenSWMM_Code_Review_2026/4-io/IO-23-unit-hydrograph-without-gage/IO-23_no-gages.inp None
+100/3759
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-07-xsection-lookup-nan-index/CRASH-07_tiny-diameter.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-07-xsection-lookup-nan-index/CRASH-07_nan-diameter.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-07-xsection-lookup-nan-index/CRASH-07_nan-initflow.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-02-xsection-before-link-heap-overflow/CRASH-02_orifice-bad-node.inp None
+200/3759
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-02-xsection-before-link-heap-overflow/CRASH-02_xsect-before-weir.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-03-curve-without-points/CRASH-03_empty-timeseries.inp None
+300/3759
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-20-error-string-overflow-524/CRASH-20_long-name.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-04-curve-id-only-line-count-pass/CRASH-04_curve-id-only.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-04-curve-id-only-line-count-pass/CRASH-04_quoted-shape.inp None
+400/3759
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-03-curve-without-points/CRASH-03_empty-curve.inp None
+500/3759
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-05-expression-buffer-overflow/CRASH-05_long-name.inp None
+600/3759
+700/3759
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-05-expression-buffer-overflow/CRASH-05_long-number.inp None
+800/3759
+900/3759
+1000/3759
+1100/3759
+1200/3759
+1300/3759
+1400/3759
+1500/3759
+1600/3759
+1700/3759
+1800/3759
+1900/3759
+DIFF OpenSWMM_Code_Review_2026/4-io/IO-02-time-options-accept-nan-inf-huge/IO-02_end-time-1e30.inp None
+2000/3759
+DIFF z1000Years/1000yearSimulation_Case0.inp [55, '  Total Precipitation ......     29469.276     35363.131', '  Total Precipitation ......     44653.675     53584.410']
+2100/3759
+DIFF z1000Years/1000yearSimulation_Case0_wq.inp [47, '  Sewershed Rainfall ......     18158.181      5917.115', '  Sewershed Rainfall ......     22329.556      7276.419']
+3759 models, 2151 done, 1608 to run
+DIFF SWMM5_NCIMM/oneyear_extran1.inp None
+100/1608
+DIFF OWA_EXTRAN/longTS_extran1.inp None
+200/1608
+300/1608
+400/1608
+500/1608
+600/1608
+700/1608
+800/1608
+900/1608
+1000/1608
+1100/1608
+1200/1608
+1300/1608
+1400/1608
+1500/1608
+DIFF Hydrology/sewer_rdii_problem.inp None
+DIFF SWMM5_NCIMM/1220_Nodes.inp None
+DIFF SWMM5_NCIMM/4190_Nodes.inp None
+DIFF SWMM5_NCIMM/669_Subs_4500_Nodes.inp None
+1600/1608
+DIFF Simon_EPA/Session38_100_Control_Rules.inp None
+3759 models, 3759 done, 0 to run

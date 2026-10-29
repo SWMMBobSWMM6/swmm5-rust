@@ -227,6 +227,15 @@ BLOCKS = [
         "<b>Every corpus model with a FILLED_CIRCULAR conduit</b>, the shape that taught us about the bit: {FC_RESULT}.",
         "<b>The corpus set</b> that swmm5-cplus was gated on, {NCO} models from Bob's 1729-SWMM5-Models-2030 collection (every "
         "model under 125 KB and a seeded sample of larger ones): {CORPUS_RESULT}."]),
+('p?HC_RESULT', "Those three sets ran on the binary built before one last change to the engine. A control rule can read a "
+      "link's velocity, and C works it out through a pointer to the link's own cross-section, the same pointer that lets "
+      "FILLED_CIRCULAR edit that section by a bit. The Rust had used a read-only copy there, on an argument that the edit could not matter by then; "
+      "an argument is not a test, so it now calls the function C calls. Built from the source as it stands, the engine went through "
+      "the {N221} smoke and coverage models again and every other gated model with control rules but the ten largest, {NHC} in "
+      "all: {HC_RESULT}. The WebAssembly runs below are that build too."),
+('p?TO_RESULT', "Some runs never got an answer. Two cores shared by several gates make every run slower, and the biggest models "
+      "hit the five-minute cap in one engine or both. Those, the ten largest rule models among them, were run again with "
+      "the engine as it stands, two at a time on a machine doing nothing else, with an hour each: {TO_RESULT}."),
 ('fig', 'gate', "The smoke and coverage set by folder. Log scale, because the folders differ in size by two orders of magnitude."),
 ('fig', 'corpus', "The corpus set by folder."),
 ('p', "Then the browser. All three engines, EPA's C, swmm5-cplus and swmm5-rust, compile to WebAssembly, and the gate was run "
@@ -242,14 +251,51 @@ BLOCKS = [
       "here? The way to find out is to time it, and the way to time it honestly is to time the noise first. Each model ran in "
       "EPA, swmm5-cplus, swmm5-rust and then EPA again, interleaved, several times over. The spread between the two EPA runs is "
       "the noise floor; a ratio inside it means nothing."),
-('fig', 'timing', "Native run time against EPA, per model. A dot inside the grey band is indistinguishable from noise."),
-('fig', 'timing_wasm', "The same comparison in WebAssembly."),
+('fig', 'timing', "Native run time against EPA, per model, in CPU seconds. A dot inside the grey band is indistinguishable from "
+        "noise. Builds: EPA with <code>gcc -O2</code>, swmm5-cplus with <code>g++ -O2 -flto</code> (the build it ships), swmm5-rust "
+        "with <code>cargo build --release</code> (optimisation level 2, no link-time optimisation); GCC 13.3, Rust 1.97."),
+('fig', 'timing_wasm', "The same comparison in WebAssembly, in node. EPA and swmm5-cplus from Clang 18 with wasi-libc, swmm5-rust "
+        "from Rust 1.91 with link-time optimisation; all three read and write files through the same in-memory file system."),
 ('p?NO_TIMING', "Those runs are waiting for a quiet machine. Two cores busy with the gates make a poor stopwatch, and a number "
       "measured on one would be noise dressed up as a result. This section will carry the measurements when they are in."),
-('p?T_RS', "Natively, swmm5-rust's median time is {T_RS} of EPA's, against a noise floor of {T_FLOOR}. Part of that is the bounds "
-      "checks, and part is that the translation was written to match EPA's arithmetic, not to be fast: it copies cross-sections "
-      "where C used a pointer, and it formats every number in the report through a printf written for exactness. No time was spent "
-      "on speed. The engine is correct first; fast can come later, under the same gate."),
+('p?T_TEXT', "{T_TEXT}"),
+('p?TW_TEXT', "{TW_TEXT}"),
+('p?P_MODEL', "A stopwatch says how much, not where. For where there is a slower instrument. Valgrind's callgrind runs a program on "
+      "a simulated processor and counts every instruction it executes, function by function, and the count comes out the same "
+      "whether the machine is idle or busy, so it could be taken while the gates ran. On {P_N} models swmm5-rust executes "
+      "{P_RANGE} more instructions than EPA. On {P_MODEL}, a dynamic-wave model, the counts are {P_EPA} and {P_RS}."),
+('fig', 'profile', "Instruction counts for the ten busiest functions of one run. The same libm <code>pow</code>, <code>sin</code>, "
+        "<code>cos</code> and <code>sincos</code> serve both engines and count the same, so they are left out."),
+('p?P_MODEL', "The first thing the counts show is not a cost at all. Of the {P_BOTH} engine functions that both builds keep as "
+      "functions of their own on those models, {P_SAMECALLS} are called exactly as many times in one as in the other. The other "
+      "{P_DIFFN} are small ones, date arithmetic, keyword matching, number parsing, a few setters and wrappers, that one compiler "
+      "copied into some of their callers and the other did not; the caller lists show where. One of them, "
+      "<code>link_getYcrit</code>, is a one-line wrapper, and the function it wraps is called equally often in both. The "
+      "translation calls what the C calls, as often as the C calls it. The second thing is where the extra goes. On {P_MODEL}, {P_LOOKUP_SHARE} "
+      "of it ({P_LOOKUP_OTHER}) is in one function of {P_LOOKUP_LINES} lines: the table lookup that the tabulated cross-sections, the "
+      "circular pipe among them, use to find area, width and hydraulic radius from depth. Both engines call it "
+      "{P_LOOKUP_CALLS} times. EPA spends {P_LOOKUP_EPA} instructions a call; swmm5-rust spends {P_LOOKUP_RS}."),
+('code', 'c', '@@FUNC:xsect.c|double lookup(double x, double *table, int nItems)'),
+('p?P_MODEL', "Read the machine code of the two and the difference has two halves. C turns <code>x / delta</code> into an "
+      "integer with one instruction, <code>cvttsd2si</code>. The Rust needs twelve for the same integer: Rust's own conversion "
+      "clamps a value that does not fit and turns NaN into zero, where that instruction gives the most negative integer for both, "
+      "and <code>ccast</code> then puts the instruction's answer back, because the bits have to match. That is eleven of the "
+      "{P_LOOKUP_EXTRA} extra instructions a call, and it is the price of copying C exactly, not of safety. Most of the rest is "
+      "the table. C reads <code>table[i]</code> and its neighbours without asking whether they exist; the Rust checks each read, "
+      "a comparison and a branch that is never taken, and returns 0.0 for a read outside the table where C would read whatever "
+      "lay there (RS-10). Twenty-odd million calls make them count. (<code>results/lookup_disasm.txt</code> has both functions "
+      "as compiled.)"),
+('p?P2_MODEL', "One more item is not safety at all but a translation choice. EPA's output writer hands each object's results to the C "
+      "library's file buffer. The translation gathers them into a small vector of bytes first and frees it after, a fresh "
+      "allocation for every object at every reporting step. On {P2_MODEL}, a continuous simulation that reports often, that comes "
+      "to {P2_ALLOC_RS} memory allocations against EPA's {P2_ALLOC_EPA}, {P2_ALLOC_W} of them in the writer, and the writer, with everything it calls, costs "
+      "{P2_OUT_RS} instructions against EPA's {P2_OUT_EPA}: {P2_SHARE} of the difference on that model. A buffer kept from one "
+      "write to the next would remove most of it and write the same bytes, and the gate would be the judge of that."),
+('p?P_MODEL', "The rest of the difference is spread thin over the dynamic-wave loop, the node flow updates and the flow "
+      "statistics. Some of it is the two compilers' different choices about which small functions to fold into their "
+      "callers, so function-by-function counts compare only roughly. {P_VS_T} The stopwatch is the measurement. The counts say where a "
+      "faster swmm5-rust would start: in <code>lookup</code> and the output writer, under the same gate. No time was spent on speed. The engine is "
+      "correct first."),
 
 ('h2', 'Three engines in one page', 'app'),
 ('p', "The app this essay lives in carries all three engines, compiled to WebAssembly and packed into the page itself. Its "
@@ -268,9 +314,12 @@ BLOCKS = [
         "register are reproduced on purpose.",
         "It does not reproduce EPA where EPA's behaviour is undefined. There, swmm5-rust stops with a message, or writes the error "
         "report EPA meant to write (RS-9), or reads 0.0 where C reads far outside a table (RS-10).",
+        "It does not run out of memory the way EPA does. Where C checks an allocation and reports ERROR 101 when it fails, "
+        "the Rust stops with \"memory allocation failed\" and writes no report. One corpus model asks both engines for 3.4 GB of "
+        "RDII rainfall history and showed the difference under the gate's 3 GiB cap; given the memory, the two agree byte for byte.",
         "Safe Rust rules out memory errors. It does not rule out wrong arithmetic. That is checked only by the gate, and only on "
         "the models the gate ran.",
-        "It is not faster than the C.",
+        "{LIMIT_SPEED}",
         "The C interface that lets C and JavaScript call the engine has {CAPI_UNSAFE} small unsafe blocks, where pointers come in "
         "from the caller. They are the only unsafe code in the engine and its interface; the test harnesses that call glibc "
         "and the c2rust copy for comparison use it too, and do not ship.",

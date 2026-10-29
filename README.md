@@ -2,24 +2,24 @@
 
 **EPA SWMM 5.2.4 translated into safe Rust, byte-identical to EPA's engine.**
 
-The engine crate carries `#![forbid(unsafe_code)]`: the compiler checks every array index and every reference, and an `unsafe` block anywhere in it is a build error. Nothing it computes differs from EPA SWMM 5.2.4. For every model where EPA's own behaviour is defined, the binary `.out` file is identical byte for byte and the `.rpt` report is identical byte for byte after removing the three lines that print the wall clock.
+The engine crate carries `#![forbid(unsafe_code)]`: the compiler checks every array index and every reference, and an `unsafe` block anywhere in it is a build error. It is held to EPA SWMM 5.2.4's output: on every gated model where EPA's own behaviour is defined, the binary `.out` file is identical byte for byte and the `.rpt` report is identical byte for byte after removing the three lines that print the wall clock (see [Results](#results) for which models, and for the few runs still inconclusive).
 
 | | |
 |---|---|
 | Reference | EPA SWMM 5.2.4, [USEPA/Stormwater-Management-Model](https://github.com/USEPA/Stormwater-Management-Model/tree/v5.2.4) tag `v5.2.4` |
 | Safe engine | `crates/engine`: 63 files, about 56,000 lines, no `unsafe` |
-| Unsafe code | `crates/capi` only: 7 small blocks where C or JavaScript callers hand in pointers |
-| Native gate | see [Results](#results) |
+| Unsafe code | in the engine and its interface, `crates/capi` only: 7 small blocks where C or JavaScript callers hand in pointers. The test harnesses that call glibc or the c2rust baseline for comparison use `unsafe` too; they do not ship |
+| Gates | see [Results](#results) |
 | WebAssembly | `wasm32-wasip1`, runs in the app beside EPA's C and swmm5-cplus |
-| App | `dist/swmm5-rust.html`: one file, three engines, with a Doc tab (also `dist/swmm5-rust-doc.docx`) |
+| App | `dist/swmm5-rust.html`: one file, three engines, with a Doc tab (the essay is also `dist/swmm5-rust-doc.docx`). Built by `app/build.py` |
 
 ## Why
 
-C lets a program read the eleventh element of a ten-element array; the result is "undefined", and the program usually carries on with whatever it read. Six decks from the OpenSWMM 2026 code review make EPA 5.2.4 do exactly that (see [docs/DEFECTS.md](docs/DEFECTS.md), RS-5 to RS-9). Natively some run on and some crash with an empty report; in WebAssembly the answers change again. swmm5-rust stops at the bad index with a message naming the line, on every platform.
+C lets a program read the eleventh element of a ten-element array; the result is "undefined", and the program usually carries on with whatever it read. Decks from the OpenSWMM 2026 code review make EPA 5.2.4 do exactly that (see [docs/DEFECTS.md](docs/DEFECTS.md), RS-5 to RS-10). Natively some run on and some crash with an empty report; in WebAssembly the answers change again. swmm5-rust's answer does not change with the platform: it stops at the bad index with a message naming the line, or writes the error report where C's bad access comes only on cleanup (RS-9), or, at the one place the translators chose a value, reads 0.0 where C reads far outside a table (RS-10).
 
 ## How it was built
 
-1. **Baseline.** [c2rust](https://github.com/immunant/c2rust) 0.22.1 turned EPA's C into Rust statement for statement (`crates/c2rust-baseline`, 978 functions, every one `unsafe`). `tools/c2rust_stable.py` makes it build on stable Rust; `tools/c2rust_casts.py` routes its float-to-integer casts through `ccast` (below). It matches EPA on all 221 smoke and coverage models and never ships: it is the reference the safe engine was checked against.
+1. **Baseline.** [c2rust](https://github.com/immunant/c2rust) 0.22.1 turned EPA's C into Rust statement for statement (`crates/c2rust-baseline`, 978 functions, every one `unsafe`). `tools/c2rust_stable.py` makes it build on stable Rust; `tools/c2rust_casts.py` routes its float-to-integer casts through `ccast` (below). It matches EPA on all 221 smoke and coverage models (the six memory-error decks included: a statement-for-statement copy goes wrong where the C goes wrong) and never ships: it is the reference the safe engine was checked against.
 2. **Skeleton.** Data types, one `Project` structure that owns the whole model (every global, and every module's file-scope statics in a state structure of its own), and a stub for every function.
 3. **Translation.** The 54 modules, in ten parallel batches, all under one rule book: [TRANSLATING.md](TRANSLATING.md). Literal translation, same names, same statement order, arithmetic bit for bit, strings as bytes, linked lists as vectors in walk order.
 4. **Integration and gates.** `tools/gate.py` (native) and `tools/wasm_gate3.py` (WebAssembly, three engines) compare outputs byte for byte. `crates/difftest/src/bin/lockstep.rs` steps the c2rust baseline and the safe engine side by side and reports the first state variable whose bits differ.
@@ -31,16 +31,39 @@ Two support modules make byte identity possible:
 
 ## Results
 
-Filled in from `results/` when the gates finish; the app's Verify tab and the Doc essay are built from the same files.
+<!-- RESULTS -->
+Written by `app/build.py` from `results/`; the app's Verify tab and the Doc essay are built from the same files.
+
+| Gate (EPA 5.2.4 as reference) | Models | Identical | Undefined in C | Different | Inconclusive |
+|---|---|---|---|---|---|
+| Native: smoke and coverage set | 221 | 215 | 6 | 0 | 0 |
+| Native: every corpus model with FILLED_CIRCULAR | 68 | 59 | 0 | 0 | 9 |
+| Native: corpus set (3,759 models) | 3,759 | 3,738 | 15 | 0 | 6 |
+| Native, engine as it stands: the 221 set and every other gated model with control rules | 415 | 409 | 6 | 0 | 0 |
+| WebAssembly: swmm5-rust vs EPA, same libc | 221 | 215 | 6 | 0 | 0 |
+| WebAssembly: swmm5-cplus vs EPA (for reference) | 221 | 215 | 6 | 0 | 0 |
+| Platform control: EPA wasm vs EPA native | 221 | 194 | 6 | 21 | 0 |
+
+"Identical" means the `.out` file byte for byte and the `.rpt` byte for byte after removing the three wall-clock lines. "Undefined in C": EPA reads or writes memory it does not own (an explicit list of decks, plus any model that crashes EPA with a signal); see docs/DEFECTS.md. "Inconclusive": a run hit the time or memory cap.
+
+Inconclusive: `OWA_EXTRAN/longTS_extran1.inp`, `OpenSWMM_Code_Review_2026/4-io/IO-02-time-options-accept-nan-inf-huge/IO-02_end-time-1e30.inp` (IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA's own run does not end; not rerun), `SWMM5_NCIMM/1220_Nodes.inp`, `SWMM5_NCIMM/12334_Nodes.inp`, `SWMM5_NCIMM/2348_Nodes.inp`, `SWMM5_NCIMM/235_Subs_RDII.inp`, `SWMM5_NCIMM/23865_Nodes.inp`, `SWMM5_NCIMM/3363_Nodes.inp`, `SWMM5_NCIMM/4190_Nodes.inp`, `SWMM5_NCIMM/669_Subs_4500_Nodes.inp`, `SWMM5_NCIMM/6715_Nodes_400_Subs.inp`, `SWMM5_NCIMM/8117_Nodes.inp`, `SWMM5_NCIMM/8394_H&H_Elements.inp`, `SWMM5_NCIMM/indy_small.inp`, `Simon_EPA/Session38_100_Control_Rules.inp`
+
+Native run time over 12 models (`tools/bench3.py`, CPU seconds, median of 5 interleaved runs of EPA, C++, Rust, EPA): swmm5-rust 1.12× EPA at the median, swmm5-cplus 0.94×; on ten of the twelve it is slower by more than EPA differs from itself on the same model; on two the difference is inside that noise (Rust).
+
+Instruction counts (callgrind, `tools/profile.py`, results/profile.json): swmm5-rust executes 23% more on `manifold_pumps.inp`, 20% more on `46_Subs.inp`, 26% more on `10_Subs_Continuous.inp`, 11% more on `Peter Klaver_WQ_Tracer.inp` than EPA. On `manifold_pumps.inp` 37 percent of the extra is in xsect.c's `lookup()` (35.5 instructions a call in EPA, 62.1 in swmm5-rust, 22,640,867 calls in each).
+
+WebAssembly run time in node over 12 models (`app/bench_wasm.js`): swmm5-rust 1.36× EPA at the median, swmm5-cplus 0.99×; on all twelve it is slower by more than EPA differs from itself on the same model (Rust).
+<!-- /RESULTS -->
 
 ## Defects found
 
-[docs/DEFECTS.md](docs/DEFECTS.md) has the register (RS-1 to RS-9) with the C as released. Four are reproduced on purpose so the output still matches EPA: a storage index used as a node index (RS-1), an LID error message that prints its own template (RS-2), the FILLED_CIRCULAR round trip that edits a link's geometry by one bit (RS-3), and out-of-range float-to-int conversions (RS-4). [docs/UNDEFINED.md](docs/UNDEFINED.md) lists every other place the translators noted that the C is undefined, and what the Rust does there.
+[docs/DEFECTS.md](docs/DEFECTS.md) has the register (RS-1 to RS-10) with the C as released, and says where the OpenSWMM 2026 code review or Bob's earlier swmm5-rs port found the same fault first. Four are reproduced on purpose so the output still matches EPA: a storage index used as a node index (RS-1), an LID error message that prints its own template (RS-2), the FILLED_CIRCULAR round trip that edits a link's geometry by one bit (RS-3), and out-of-range float-to-int conversions (RS-4). [docs/UNDEFINED.md](docs/UNDEFINED.md) lists every other place the translators noted that the C is undefined, and what the Rust does there.
 
-### Deliberate departures that cannot change the output
+### Departures from the C
 
 * `getAbsolutePath()`: C copies up to PATH_MAX bytes into the 260-byte `InpDir`; the Rust truncates to the buffer. (EPA's own runswmm aborts under glibc fortify on relative paths, so the gate passes absolute ones.)
 * Scratch files: C's Linux branch creates `swmmXXXXXX` in the current directory. The Rust uses the TEMPDIR option if set, as EPA's Windows branch does, otherwise the system temporary directory, and on WASI the current directory. The name never reaches the outputs.
+* Running out of memory: where C checks an allocation and reports ERROR 101 when it fails, a Rust `Vec` that cannot be allocated stops the program with "memory allocation failed" and no report. Given the memory, the two agree: `Hydrology/sewer_rdii_problem.inp` asks both engines for 3.4 GB of RDII rainfall history, so under the gate's 3 GiB address-space cap EPA reported ERROR 101 and the Rust stopped; rerun without the cap (`results/rs_memcap_rerun.jsonl`) the outputs are byte-identical.
 * `controls_delete()` after an early input error (CRASH-08): C walks a NULL array and crashes; the Rust finds an empty vector and writes the error report.
 
 ## Building
