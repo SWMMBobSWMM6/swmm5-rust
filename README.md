@@ -44,9 +44,9 @@ Written by `app/build.py` from `results/`; the app's Verify tab and the Doc essa
 | WebAssembly: swmm5-cplus vs EPA (for reference) | 221 | 215 | 6 | 0 | 0 |
 | Platform control: EPA wasm vs EPA native | 221 | 194 | 6 | 21 | 0 |
 
-"Identical" means the `.out` file byte for byte and the `.rpt` byte for byte after removing the three wall-clock lines. "Undefined in C": EPA reads or writes memory it does not own (an explicit list of decks, plus any model that crashes EPA with a signal); see docs/DEFECTS.md. "Inconclusive": a run hit the time or memory cap.
+"Identical" means the `.out` file byte for byte and the `.rpt` byte for byte after removing the three wall-clock lines. "Undefined in C": EPA reads or writes memory it does not own (an explicit list of decks, plus any model that crashes EPA with a signal); see docs/DEFECTS.md. "Inconclusive": a run hit the time, memory or file-size cap.
 
-Inconclusive: `OpenSWMM_Code_Review_2026/4-io/IO-02-time-options-accept-nan-inf-huge/IO-02_end-time-1e30.inp` (IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA's own run does not end; not rerun), `Simon_EPA/Session38_100_Control_Rules.inp`
+Inconclusive: `OpenSWMM_Code_Review_2026/4-io/IO-02-time-options-accept-nan-inf-huge/IO-02_end-time-1e30.inp` (IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA's own run does not end; not rerun), `Simon_EPA/Session38_100_Control_Rules.inp` (it reports every minute for eleven days; run with no time cap, both engines stopped at the gate's 2 GiB file-size cap, and the first 2,147,483,648 bytes of the two .out files are identical)
 
 Native run time over 12 models (`tools/bench3.py`, CPU seconds, median of 5 interleaved runs of EPA, C++, Rust, EPA): swmm5-rust 1.12× EPA at the median, swmm5-cplus 0.94×; on ten of the twelve it is slower by more than EPA differs from itself on the same model; on two the difference is inside that noise (Rust).
 

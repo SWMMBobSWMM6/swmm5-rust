@@ -13,7 +13,7 @@ Every number in the app and the essay is computed by `app/build.py` from these f
 | `tier0.txt` ... `tier5.txt` | the 221 split by the features they use, simplest first (used while integrating) |
 | `bench_list.txt` | the 12 models timed (the swmm5-cplus speed-study models plus four EPA examples) |
 
-The corpus is [SWMMBobSWMM6/1729-SWMM5-Models-2030](https://github.com/SWMMBobSWMM6/1729-SWMM5-Models-2030).
+The corpus is [SWMMBobSWMM6/1729-SWMM5-Models-2030](https://github.com/SWMMBobSWMM6/1729-SWMM5-Models-2030) at commit `9ee63bd` (23 October 2026). Gate runs write interface files into the model folders (some with Windows paths that become file names on Linux); the clone was restored with `git checkout . && git clean -fd` afterwards.
 
 ## Gates (one JSON line per model)
 

@@ -113,7 +113,8 @@ gco = merged(jl(f'{RES}/rs_corpus.jsonl')); TCO = tally(gco)
 UB_CORPUS = sorted({r['inp'].split('/')[-1] for r in gco if classify(r) == 'ub'})
 DIFF_LIST = sorted({r['inp'] for r in g221 + gfc + gco + ghc if classify(r) == 'diff'})
 INC_LIST = sorted({r['inp'] for r in g221 + gfc + gco + ghc if classify(r) == 'inc'})
-INC_WHY = {'IO-02_end-time-1e30.inp': 'IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA\'s own run does not end; not rerun'}
+INC_WHY = {'Session38_100_Control_Rules.inp': 'it reports every minute for eleven days; run with no time cap, both engines stopped at the gate\'s 2 GiB file-size cap, and the first 2,147,483,648 bytes of the two .out files are identical',
+           'IO-02_end-time-1e30.inp': 'IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA\'s own run does not end; not rerun'}
 def inc_note(x): w = INC_WHY.get(x.split('/')[-1]); return f'{x} ({w})' if w else x
 N_FC = sum(1 for l in open(f'{RES}/filled68.txt') if l.strip())
 N_CO = sum(1 for l in open(f'{RES}/corpus_set.txt') if l.strip())
@@ -238,6 +239,12 @@ if _TO:
         if _r and classify(_r) == 'same':
             NUM['TO_RESULT'] += (f". The last, <code>{_nm}</code>, kept EPA itself busy past the hour, so EPA and the Rust ran it side by "
                                  f"side with no cap at all: identical, after {_r['t_ref'] / 60:.0f} minutes for EPA and {_r['t_test'] / 60:.0f} for the Rust")
+        elif _r and _r.get('rc_ref') == -25 and _r.get('rc_test') == -25 and _r.get('out_same'):
+            NUM['TO_RESULT'] += (f". The last, <code>{_nm}</code>, kept EPA itself busy past the hour, so EPA and the Rust ran it side by "
+                                 f"side with no time cap. It reports every minute for eleven days, and both runs stopped where the gate "
+                                 f"stops any file, at 2 GiB, after {_r['t_ref'] / 60:.0f} minutes for EPA and {_r['t_test'] / 60:.0f} for the "
+                                 f"Rust. Those first {_r['out_bytes']:,} bytes of the two <code>.out</code> files are the same, byte for byte; "
+                                 f"the rest of the run, and the report written at its end, were never reached, so the model stays inconclusive")
         elif _r:
             NUM['TO_RESULT'] += f". The last, <code>{_nm}</code>, run with no cap: {classify(_r)}"
         else:
@@ -665,7 +672,7 @@ res_md = ('Written by `app/build.py` from `results/`; the app\'s Verify tab and 
           + f"| Platform control: EPA wasm vs EPA native | {WN_ALL} | {WS['plat']} | {W_UB} | {WN - WS['plat']} | 0 |\n\n"
           '"Identical" means the `.out` file byte for byte and the `.rpt` byte for byte after removing the three wall-clock lines. '
           '"Undefined in C": EPA reads or writes memory it does not own (an explicit list of decks, plus any model that crashes EPA with a signal); '
-          'see docs/DEFECTS.md. "Inconclusive": a run hit the time or memory cap.\n')
+          'see docs/DEFECTS.md. "Inconclusive": a run hit the time, memory or file-size cap.\n')
 if DIFF_LIST: res_md += '\nDifferent: ' + ', '.join(f'`{x}`' for x in DIFF_LIST) + '\n'
 if INC_LIST: res_md += '\nInconclusive: ' + ', '.join(f'`{x}`' + (f' ({INC_WHY[x.split("/")[-1]]})' if x.split('/')[-1] in INC_WHY else '') for x in INC_LIST) + '\n'
 if bench_n: res_md += (f"\nNative run time over {bench_n['summary']['models']} models (`tools/bench3.py`, CPU seconds, median of {bench_n['summary']['reps']} interleaved runs of EPA, C++, Rust, EPA): "
