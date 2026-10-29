@@ -3049,29 +3049,3 @@ fn outlet_getFlow(prj: &mut Project, k: i32, head: f64) -> f64
 }
 
 //=============================================================================
-
-/// link_getVelocity for a caller that holds the model shared (controls.c's
-/// rule variables). C calls the same function, whose area lookup can make
-/// FILLED_CIRCULAR's one-bit round-trip edit to Link[j].xsect. That edit
-/// changes a section at most once, and by the time a rule reads a velocity
-/// (depth > 0.01 ft) the routing step before it has already looked up that
-/// conduit's area at a nonzero depth, so here it would change nothing.
-pub fn link_getVelocityShared(prj: &Project, j: i32, mut flow: f64, depth: f64) -> f64 {
-    let ju = j as usize;
-    let area: f64;
-    let mut veloc: f64 = 0.0;
-    let k: i32;
-
-    if depth <= 0.01 {
-        return 0.0;
-    }
-    if prj.Link[ju].type_ == CONDUIT {
-        k = prj.Link[ju].subIndex;
-        flow /= prj.Conduit[k as usize].barrels as f64;
-        area = xsect_getAofY(prj, &prj.Link[ju].xsect, depth);
-        if area > FUDGE {
-            veloc = flow / area;
-        }
-    }
-    veloc
-}

@@ -541,14 +541,15 @@ fn getVariableIndex(prj: &Project, varName: &[u8]) -> i32
 
 //=============================================================================
 
-fn getNamedVariableValue(prj: &Project, varIndex: i32) -> f64
+fn getNamedVariableValue(prj: &mut Project, varIndex: i32) -> f64
 //
 //  Input:   varIndex = index of a named variable
 //  Output:  returns the current value of the variable
 //  Purpose: finds the value of a named variable.
 //
 {
-    getVariableValue(prj, prj.controls.NamedVariable[varIndex as usize].variable)
+    let v = prj.controls.NamedVariable[varIndex as usize].variable;
+    getVariableValue(prj, v)
 }
 
 //=============================================================================
@@ -1487,13 +1488,18 @@ fn evaluatePremise(prj: &mut Project, p: &TPremise, tStep: f64) -> i32
 
     // --- check if left hand side (lhs) of premise is an expression
     if p.exprIndex >= 0 {
-        let pr: &Project = prj;
-        lhsValue = match &pr.controls.Expression[p.exprIndex as usize].expression {
+        // (the expression is taken out of the model while it is evaluated,
+        //  because a variable's value may edit a link's cross-section, as
+        //  C's link_getVelocity() does for FILLED_CIRCULAR; it is put back)
+        let ei = p.exprIndex as usize;
+        let expr = prj.controls.Expression[ei].expression.take();
+        lhsValue = match &expr {
             Some(expr) => mathexpr_eval(expr,
-                &mut |varIndex: i32| getNamedVariableValue(pr, varIndex)),
+                &mut |varIndex: i32| getNamedVariableValue(prj, varIndex)),
             // C: mathexpr_eval(NULL, ...) evaluates nothing and returns 0.0
             None => 0.0,
         };
+        prj.controls.Expression[ei].expression = expr;
     }
     // --- otherwise get value of the lhs variable
     else {
@@ -1524,7 +1530,7 @@ fn evaluatePremise(prj: &mut Project, p: &TPremise, tStep: f64) -> i32
 
 //=============================================================================
 
-fn getVariableValue(prj: &Project, v: TVariable) -> f64
+fn getVariableValue(prj: &mut Project, v: TVariable) -> f64
 {
     let mut i: i32 = -1;    // a node index
     let mut j: i32 = -1;    // a link index
@@ -1593,8 +1599,11 @@ fn getVariableValue(prj: &Project, v: TVariable) -> f64
                 r_FULLFLOW => lk.qFull * UCF(prj, FLOW),
                 r_FULLDEPTH => lk.xsect.yFull * UCF(prj, LENGTH),
                 r_VELOCITY => {
-                    link_getVelocityShared(prj, j, lk.newFlow, lk.newDepth)
-                        * UCF(prj, LENGTH)
+                    // (C's link_getVelocity() reads the cross-section through
+                    //  a pointer to the link and, for FILLED_CIRCULAR, edits
+                    //  it; the mutable version does the same)
+                    let (q, y) = (lk.newFlow, lk.newDepth);
+                    link_getVelocity(prj, j, q, y) * UCF(prj, LENGTH)
                 }
                 r_LENGTH => prj.Conduit[lk.subIndex as usize].length * UCF(prj, LENGTH),
                 r_SLOPE => prj.Conduit[lk.subIndex as usize].slope,
