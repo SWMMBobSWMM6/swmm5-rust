@@ -1548,6 +1548,12 @@ pub fn getTempFileName(prj: &mut Project, fname: &mut [u8])
             }
         }
     }
+    // (WASI has no system temporary directory, and std::env::temp_dir()
+    //  panics there; the file goes in the current directory, as C's
+    //  Linux branch puts it.)
+    if dir.is_none() && cfg!(target_os = "wasi") {
+        dir = Some(Vec::new());
+    }
     if dir.is_none() {
         let t = std::env::temp_dir();
         #[cfg(unix)]
@@ -1584,7 +1590,9 @@ fn mkstemp(prj: &mut Project, template: &mut [u8]) {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos() as u64)
             .unwrap_or(0);
-        prj.swmm5.TempNameSeed = t ^ ((std::process::id() as u64) << 32) ^ 0x9E37_79B9_7F4A_7C15;
+        // (std::process::id() panics on WASI, which has no process ids)
+        let pid: u64 = if cfg!(target_os = "wasi") { 0 } else { std::process::id() as u64 };
+        prj.swmm5.TempNameSeed = t ^ (pid << 32) ^ 0x9E37_79B9_7F4A_7C15;
     }
     let orig: Vec<u8> = template[len - 6..len].to_vec();
     for _attempt in 0..238328 {
