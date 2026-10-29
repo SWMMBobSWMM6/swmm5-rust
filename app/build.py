@@ -40,7 +40,15 @@ def c2r_census():
             j = s.find('{', m.end()); k = s.find(';', m.end())
             if k != -1 and (j == -1 or k < j): continue
             tot += 1; uns += bool(m.group(2))
-        statics += len(re.findall(r'^\s*(pub\s+)?static\s+mut\s', s, re.M))
+        inext = False; depth = 0
+        for ln in s.split('\n'):
+            st = ln.strip()
+            if re.match(r'(unsafe\s+)?extern\s+"C"\s*\{', st): inext = True; depth = 0
+            if inext:
+                depth += ln.count('{') - ln.count('}')
+                if depth <= 0: inext = False
+                continue
+            if re.match(r'(pub\s+)?static\s+mut\s', st): statics += 1
     return tot, uns, statics
 c2r_fns, c2r_unsafe, c2r_statics = c2r_census()
 rs_fns = sum(len(re.findall(r'^\s*(pub(\([a-z]+\))?\s+)?fn\s+\w+', rd(f), re.M)) for f in rs_files)
@@ -48,7 +56,7 @@ rs_unsafe_tokens = sum(len(re.findall(r'\bunsafe\s*(\{|fn|impl)', rd(f))) for f 
 assert rs_unsafe_tokens == 0, 'unsafe found in the engine'
 capi = rd(f'{REPO}/crates/capi/src/lib.rs')
 pat = lambda p: sum(len(re.findall(p, rd(f))) for f in rs_files if not f.endswith(('ccast.rs', 'cio.rs', 'macros.rs')))
-ST = dict(c_files=len(c_files), c_lines=lines_of(c_all), c2r_lines=lines_of(c2r_files), c2r_fns=c2r_fns, c2r_unsafe=c2r_unsafe,
+ST = dict(c_files=len(c_files), c_lines=lines_of(c_all), c_lines_c=lines_of(c_files), c_other=len(c_all) - len(c_files), c2r_lines=lines_of(c2r_files), c2r_fns=c2r_fns, c2r_unsafe=c2r_unsafe,
           c2r_statics=c2r_statics, rs_lines=lines_of(rs_files), rs_files=len(rs_files), rs_fns=rs_fns,
           capi_lines=capi.count('\n'), capi_unsafe=len(re.findall(r'unsafe\s*\{', capi)),
           casts=pat(r'\bf(64|32)_to_i(8|32|64)\('), prepends=pat(r'\.insert\(0,'), takes=pat(r'mem::take\('),
@@ -60,12 +68,18 @@ assert c2r_fns == c2r_unsafe
 
 # ------------------------------------------------------------------ gates
 UB = {'IO-23_no-gages.inp', 'CRASH-02_xsect-before-weir.inp', 'CRASH-03_empty-curve.inp', 'CRASH-04_quoted-shape.inp',
-      'CRASH-08_expr-bad-option.inp', 'CRASH-08_expr-duplicate-id.inp'}
+      'CRASH-08_expr-bad-option.inp', 'CRASH-08_expr-duplicate-id.inp',
+      # corpus decks checked one by one: the same C fault as a deck above
+      'CRASH-02_orifice-bad-node.inp',   # CRASH-02's other deck: ERROR 209, then Conduit[0] of an empty array is written (link.c:190)
+      }
 def classify(r):
     n = r['inp'].split('/')[-1]
     if str(r.get('rc_ref')) == 'timeout' or str(r.get('rc_test')) == 'timeout': return 'inc'
     if r['out_same'] and r['rpt_same']: return 'same'
     if n in UB: return 'ub'
+    # EPA killed by a signal (SIGSEGV, SIGABRT): its C touched memory it does not own, so there is no EPA answer.
+    # Listed by name on the Verify tab; a Rust panic where EPA ran normally is NOT in this class.
+    if isinstance(r.get('rc_ref'), int) and r['rc_ref'] < 0: return 'ub'
     return 'diff'
 def fold(rows):
     fo = collections.OrderedDict()
@@ -77,16 +91,24 @@ def fold(rows):
 def tally(rows):
     c = collections.Counter(classify(r) for r in rows)
     return dict(n=len(rows), same=c['same'], ub=c['ub'], diff=c['diff'], inc=c['inc'])
-g221 = jl(f'{RES}/rs_221_v2.jsonl'); T221 = tally(g221)
-gfc = jl(f'{RES}/rs_filled68.jsonl'); TFC = tally(gfc)
-gco = jl(f'{RES}/rs_corpus.jsonl'); TCO = tally(gco)
+RERUN = {r['inp']: r for r in jl(f'{RES}/rs_timeouts_rerun.jsonl')}   # timeouts rerun alone with a long cap
+def merged(rows): return [RERUN.get(r['inp'], r) if classify(r) == 'inc' else r for r in rows]
+g221 = merged(jl(f'{RES}/rs_221_v2.jsonl')); T221 = tally(g221)
+gfc = merged(jl(f'{RES}/rs_filled68.jsonl')); TFC = tally(gfc)
+gco = merged(jl(f'{RES}/rs_corpus.jsonl')); TCO = tally(gco)
+UB_CORPUS = sorted({r['inp'].split('/')[-1] for r in gco if classify(r) == 'ub'})
+DIFF_LIST = sorted({r['inp'] for r in g221 + gfc + gco if classify(r) == 'diff'})
+INC_LIST = sorted({r['inp'] for r in g221 + gfc + gco if classify(r) == 'inc'})
 N_FC = sum(1 for l in open(f'{RES}/filled68.txt') if l.strip())
 N_CO = sum(1 for l in open(f'{RES}/corpus_set.txt') if l.strip())
 diffs_all = [r['inp'] for r in g221 + gfc + gco if classify(r) == 'diff']
 c2r_221 = jl(f'{RES}/c2rust_casts_221.jsonl'); c2r_cov = jl(f'{RES}/c2rust_cov.jsonl')
 C2R_SAME = sum(1 for r in c2r_221 if r['out_same'] and r['rpt_same'])
 C2R_W09 = sum(1 for r in c2r_cov if not r['rpt_same'] and 'WARNING 09' in str(r.get('rpt_first_diff')))
-wz = [r for r in jl(f'{RES}/wasm3_221.jsonl') if not r.get('timeout')]
+wz_all = [r for r in jl(f'{RES}/wasm3_221.jsonl') if not r.get('timeout')]
+W_UB = sum(1 for r in wz_all if r['inp'].split('/')[-1] in UB)
+WN_ALL = len(wz_all)
+wz = [r for r in wz_all if r['inp'].split('/')[-1] not in UB]       # undefined-behaviour decks are counted apart
 WN = len(wz)
 WS = dict(rs=sum(1 for r in wz if r['rs_out'] and r['rs_rpt']), cp=sum(1 for r in wz if r['cp_out'] and r['cp_rpt']),
           plat=sum(1 for r in wz if r['plat_out'] and r['plat_rpt']), rsn=sum(1 for r in wz if r['rs_native_out'] and r['rs_native_rpt']))
@@ -167,27 +189,34 @@ def geo(v): return math.exp(sum(math.log(x) for x in v) / len(v))
 # ------------------------------------------------------------------ numbers for text
 def pct(a, b): return f'{100 * a / b:.1f}%' if b else '—'
 NUM = dict(
-    C_FILES=ST['c_files'], C_LINES=f"{ST['c_lines']:,}", C2R_LINES=f"{ST['c2r_lines']:,}", C2R_FNS=f"{ST['c2r_fns']:,}",
+    C_FILES=ST['c_files'], C_LINES=f"{ST['c_lines']:,}", C_LINES_C=f"{ST['c_lines_c']:,}", C_OTHER=ST['c_other'], CASTS_OTHER=ST['casts'] - 1, C2R_LINES=f"{ST['c2r_lines']:,}", C2R_FNS=f"{ST['c2r_fns']:,}",
     C2R_STATICS=f"{ST['c2r_statics']:,}", RS_LINES=f"{ST['rs_lines']:,}", RS_FNS=f"{ST['rs_fns']:,}", RS_FILES=ST['rs_files'],
     CAPI_LINES=ST['capi_lines'], CAPI_UNSAFE=ST['capi_unsafe'], CASTS=ST['casts'], PREPENDS=ST['prepends'], TAKES=ST['takes'],
     CPRINTF=f"{ST['cprintf']:,}", CLOSURES=ST['closures'], XS_GET=ST['xs_get'], PROJECT_FIELDS=ST['project_fields'], PROJECT_GLOBALS=ST['project_globals'], PROJECT_MODS=ST['project_mods'],
     N221=T221['n'], S221=T221['same'], UB221=T221['ub'], D221=T221['diff'],
     NFC=N_FC, DFC=TFC['n'], SFC=TFC['same'], NCO=f'{N_CO:,}', DCO=f"{TCO['n']:,}", SCO=f"{TCO['same']:,}", UBCO=TCO['ub'], DIFFCO=TCO['diff'], INCCO=TCO['inc'],
     C2R_SAME=C2R_SAME, C2R_W09=C2R_W09,
-    WN=WN, WRS=WS['rs'], WCP=WS['cp'], WPLAT=WS['plat'], WRSN=WS['rsn'], WPLAT_BAD=WN - WS['plat'],
+    WN=WN, WRS=WS['rs'], WCP=WS['cp'], WPLAT=WS['plat'], WRSN=WS['rsn'], WPLAT_BAD=WN - WS['plat'], W_UB=W_UB, WN_ALL=WN_ALL,
+    WASM_STATE=('' if WN_ALL >= 221 else f' (the run had reached {WN_ALL} of the 221 when this was built)'),
+    RUSTC_NATIVE='1.97', RUSTC_WASM='1.91',
     FP_DIFF=fprefix['differ'] if fprefix else 0, FP_VALS=f"{fprefix['values']:,}" if fprefix else '', FP_MAX=f"{fprefix['max_abs']:.1e}" if fprefix else '',
     SO_PA=f"{SO_PEAK['A_S2']:.2f}", SO_PB=f"{SO_PEAK['B_S2']:.2f}", SO_P1=f"{SO_PEAK['A_S1']:.2f}",
     SO_DIFF=f"{SO_PEAK['B_S2'] - SO_PEAK['A_S2']:.2f}", SO_MAXD_A=f"{SO_MAXD_A:.1e}", SO_MAXD_B=f"{SO_MAXD_B:.2f}",
 )
 GATE_CO_STATE = ('' if TCO['n'] >= N_CO else ' (still running when this was built)')
 NUM['CO_STATE'] = GATE_CO_STATE
+NUM['FC_RESULT'] = (f"{TFC['same']} of {TFC['n']} identical" + (f", {TFC['inc']} inconclusive (both runs hit the time cap)" if TFC['inc'] else '') + (f", {TFC['diff']} different" if TFC['diff'] else ', none different')
+                    + ('' if TFC['n'] >= N_FC else f" ({TFC['n']} of {N_FC} run when this was built)"))
 NUM['CO_DONE'] = 'all' if TCO['n'] >= N_CO else f"{TCO['n']:,} of the"
+NUM['CORPUS_RESULT'] = (f"all {N_CO:,} run, {TCO['same']:,} identical" + (f", {TCO['ub']} undefined in C" if TCO['ub'] else '') + (f", {TCO['diff']} different" if TCO['diff'] else '') + (f", {TCO['inc']} inconclusive at the time cap" if TCO['inc'] else '')
+                        if TCO['n'] >= N_CO else f"{TCO['n']:,} run when this was built, {TCO['same']:,} of them identical" if TCO['n'] else "still running when this was built")
 if bench_n:
     NUM.update(dict(T_RS=f"{bench_n['summary']['rs_median']:.2f}", T_CP=f"{bench_n['summary']['cp_median']:.2f}",
                     T_FLOOR=f"±{100 * bench_n['summary']['floor_dev']:.0f}%", T_REPS=bench_n['summary']['reps'], T_N=bench_n['summary']['models']))
 if bench_w:
     NUM.update(dict(TW_RS=f"{bench_w['summary']['rs_median']:.2f}", TW_CP=f"{bench_w['summary']['cp_median']:.2f}",
                     TW_FLOOR=f"±{100 * bench_w['summary']['floor_dev']:.0f}%"))
+if not bench_n: NUM['NO_TIMING'] = ''
 def sub(s):
     return re.sub(r'\{([A-Z0-9_]+)\}', lambda m: str(NUM[m.group(1)]) if m.group(1) in NUM else m.group(0), s)
 
@@ -270,33 +299,36 @@ tiles_inside = [[f"{ST['rs_lines']:,}", f"lines of safe Rust in {ST['rs_files']}
 # ------------------------------------------------------------------ defect register
 def cx(path, anchor, b, a): return excerpt(path, anchor, b, a)[0]
 defects = [
-    dict(id='RS-1', title='storage_getVolDiff() passes a storage index where a node index belongs', status='reproduced', statusKind='hi',
+    dict(id='RS-1', also='Reported earlier as NUM-55 in the OpenSWMM 2026 code review, which also found the second fault on the same lines: in metric models the solve mixes user units and feet, and depths come out about ten times too small. Fixed in the OpenSWMM fork (commit 3d09a10a); EPA 5.2.4 has it. The review\'s decks NUM-55_cms and NUM-55_cfs-junction-first are in the gate and match EPA.',  title='storage_getVolDiff() passes a storage index where a node index belongs', status='reproduced', statusKind='hi',
          body=f'For FUNCTIONAL (with a Newton solve), CONICAL and PYRAMIDAL storage under kinematic-wave or steady routing, the depth found for a given volume uses the storage curve of whatever unit node k points at. Same network in two section orders: peak depth in S2 is {NUM["SO_PA"]} ft with the outfall listed before the storage units and {NUM["SO_PB"]} ft with the storage units first. Try it on this tab.',
          code=cx(f'{EPA_SRC}/node.c', '*f = storage_getVolume(k, y) - storageVol->v;', 2, 1), where='node.c, lines 923-925'),
-    dict(id='RS-2', title='LID parameter errors print the message template instead of the LID name', status='reproduced', statusKind='hi',
+    dict(id='RS-2', also='Not among the OpenSWMM 2026 code review\'s entries; we found no earlier report of it.',  title='LID parameter errors print the message template instead of the LID name', status='reproduced', statusKind='hi',
          body='lid.c builds "&lt;LID name&gt; &lt;layer&gt;" in the global Msg and passes Msg; report_writeErrorMsg() then reuses Msg for the template. The deck tests/models/lid_error_message.inp gets <code>ERROR 185: invalid parameter value for LID</code> followed by the template again, ending <code>%s..</code>, in all three engines.',
-         code=cx(f'{EPA_SRC}/report.c', 'fprintf(Frpt.file, error_getMsg(code, Msg), s);', 3, 0), where='report.c line 1433, lid.c lines 982-1028'),
-    dict(id='RS-3', title='FILLED_CIRCULAR geometry edits the link\'s full depth and area as it reads them', status='reproduced', statusKind='hi',
-         body=f'The add-then-subtract round trip can leave yFull or aFull one bit lower, and C keeps the change in Link[j].xsect. A first Rust translation that worked on copies differed from EPA in {NUM["FP_DIFF"]} of {NUM["FP_VALS"]} .out values (largest {NUM["FP_MAX"]}) and in one time of maximum depth, 01:06 against EPA\'s 01:04. Fixed by writing the copy back.',
+         code=cx(f'{EPA_SRC}/report.c', 'fprintf(Frpt.file, error_getMsg(code, Msg), s);', 3, 0), where='report.c line 1433; lid.c lines 984, 999, 1011, 1028, 1041, 1155, 1170 and 1177'),
+    dict(id='RS-3', also='Not among the OpenSWMM 2026 code review\'s entries; we found no earlier report of it. It is harmless to the physics (one bit), but it is state that C changes as a side effect of reading.',  title='FILLED_CIRCULAR geometry edits the link\'s full depth and area as it reads them', status='reproduced', statusKind='hi',
+         body=f'The add-then-subtract round trip can leave yFull or aFull one bit lower, and C keeps the change in Link[j].xsect. A first Rust translation that worked on copies differed from EPA in {NUM["FP_DIFF"]} of {NUM["FP_VALS"]} .out values (largest {NUM["FP_MAX"]}) and in one time of maximum depth, 01:04 against EPA\'s 01:06. Fixed by writing the copy back.' + ' The independent review found one more read that used a copy, the link velocity a control rule asks for; it now goes through the same path (tests/models/filled_circ_control.inp).',
          code=cx(f'{EPA_SRC}/xsect.c', 'xsect->yFull += xsect->yBot;', 3, 12), where='xsect.c, filled_circ_* functions'),
-    dict(id='RS-4', title='Out-of-range float-to-int conversions are undefined in C', status='x86 behaviour reproduced', statusKind='hi',
+    dict(id='RS-4', also='Reported as CRASH-21 in the OpenSWMM 2026 code review, and met earlier by Bob Dickinson\'s c2rust port, swmm5-rs, where it was the cause of 25 reports differing from EPA\'s by one WARNING 09 line.',  title='Out-of-range float-to-int conversions are undefined in C', status='x86 behaviour reproduced', statusKind='hi',
          body=f'gage.c line 251 converts about 8.6e14 to int for any one-point rain series. x86 gives -2,147,483,648, Rust\'s <code>as</code> gives +2,147,483,647, and the difference decides whether WARNING 09 is written. It changed {NUM["C2R_W09"]} reports in the c2rust translation until every conversion went through ccast.',
-         code=cx(f'{EPA_SRC}/gage.c', 'gageInterval = (int)(floor(Tseries[k].dxMin*SECperDAY + 0.5));', 0, 4), where='gage.c line 251 (and 62 other conversions)'),
-    dict(id='RS-5', title='IO-23: a unit hydrograph group with no rain gage reads Gage[0] of an empty array', status='Rust stops; C reads on', statusKind='warn',
+         code=cx(f'{EPA_SRC}/gage.c', 'gageInterval = (int)(floor(Tseries[k].dxMin*SECperDAY + 0.5));', 0, 4), where=f'gage.c line 251 (and {ST["casts"] - 1} other conversions)'),
+    dict(id='RS-5', also='IO-23 in the OpenSWMM 2026 code review.',  title='IO-23: a unit hydrograph group with no rain gage reads Gage[0] of an empty array', status='Rust stops; C reads on', statusKind='warn',
          body='With no gages in the project, EPA reads past the end of the gage array and runs to completion on whatever it finds. swmm5-rust stops at the index with <code>' + html.escape(deck_rows[0]['panic'].split('\n')[0]) + '</code>.',
          code=cx(f'{EPA_SRC}/rdii.c', 'if ( Gage[g].coGage >= 0 )', 3, 3), where='rdii.c line 1062'),
-    dict(id='RS-6', title='CRASH-02: an [XSECTIONS] row before its link\'s row writes past the Conduit array', status='Rust stops; C writes on', statusKind='warn',
+    dict(id='RS-6', also='CRASH-02 in the OpenSWMM 2026 code review.',  title='CRASH-02: an [XSECTIONS] row before its link\'s row writes past the Conduit array', status='Rust stops; C writes on', statusKind='warn',
          body='Link[j].type is still the 0 calloc left, and CONDUIT is 0, so a regulator-only model writes Conduit[0] of a zero-length array. EPA runs on; swmm5-rust stops at the index.',
          code=cx(f'{EPA_SRC}/link.c', 'if ( Link[j].type == CONDUIT ) Conduit[Link[j].subIndex].barrels = 1;', 1, 0), where='link.c line 190'),
-    dict(id='RS-7', title='CRASH-03: a curve with no points is dereferenced through a NULL cursor', status='Rust stops; C crashes natively', statusKind='warn',
+    dict(id='RS-7', also='CRASH-03 in the OpenSWMM 2026 code review.',  title='CRASH-03: a curve with no points is dereferenced through a NULL cursor', status='Rust stops; C crashes natively', statusKind='warn',
          body='Native EPA segfaults with an empty report. In WebAssembly address 0 is ordinary memory, so EPA runs on there and writes a report. swmm5-rust stops with a message naming table_getNextEntry.',
          code=cx(f'{EPA_SRC}/table.c', 'entry = table->thisEntry->next;', 2, 2), where='table.c line 382'),
-    dict(id='RS-8', title='CRASH-04: a quoted "Shape" leaves the Shape array empty, and project_validate() writes into it', status='Rust stops; C aborts', statusKind='warn',
+    dict(id='RS-8', also='CRASH-04 in the OpenSWMM 2026 code review.',  title='CRASH-04: a quoted "Shape" leaves the Shape array empty, and project_validate() writes into it', status='Rust stops; C aborts', statusKind='warn',
          body='The counting pass compares the token with its quotes; the reading pass strips them. Native EPA aborts on heap corruption; the WebAssembly build traps in node, and in the headless Chromium used to test this page the same access crashed the whole renderer, so the page runs this deck only in swmm5-rust. swmm5-rust stops at the index.',
          code=cx(f'{EPA_SRC}/project.c', 'Shape[j].curve = i;', 4, 2), where='project.c line 227'),
-    dict(id='RS-9', title='CRASH-08: controls_delete() walks a NULL Expression array after an early input error', status='Rust reports the error', statusKind='ok',
+    dict(id='RS-9', also='CRASH-08 in the OpenSWMM 2026 code review.',  title='CRASH-08: controls_delete() walks a NULL Expression array after an early input error', status='Rust reports the error', statusKind='ok',
          body='Native EPA segfaults on close and leaves a 0-byte report. In WebAssembly EPA survives and writes the ERROR 205/207 report, byte-identical to swmm5-rust\'s. The Rust loop finds an empty Vec and touches nothing.',
          code=cx(f'{EPA_SRC}/controls.c', 'mathexpr_delete(Expression[i].expression);', 2, 4), where='controls.c line 313'),
+    dict(id='RS-10', also='CRASH-07 in the OpenSWMM 2026 code review.', title='CRASH-07: a NaN or overflowing ratio indexes a cross-section table far outside its bounds', status='Rust reads 0.0; C crashes natively', statusKind='warn',
+         body='lookup() converts x/delta to an int with no check; a NaN or a huge ratio gives INT_MIN, and C reads 16 GB below the table. Native EPA segfaults. In WebAssembly the read lands in the module\'s own memory and EPA runs on. This is the one place the translators chose a value instead of stopping: an out-of-range read gives 0.0, because for a NaN ratio the result is NaN whatever is read. On CRASH-07_tiny-diameter all three WebAssembly engines then agree byte for byte; on CRASH-07_nan-diameter EPA\'s WebAssembly build reads something else and differs. The register says so rather than claim a match.',
+         code=cx(f'{EPA_SRC}/xsect.c', 'i = (int)(x / delta);', 2, 4), where='xsect.c line 1488 (and 1441, 1651)'),
 ]
 
 # ------------------------------------------------------------------ figures
@@ -312,7 +344,7 @@ cio_rows = [('printf, floating point', 200_000 * 41, '41 formats SWMM uses, rand
             ('atoi', 300_000, 'integer parsing, the same strings')]
 FIGS = dict(pipeline=F.fig_pipeline(dict(ST, c2r_gate=f'{C2R_SAME}/221 identical (after ccast)', rs_gate=f'{T221["same"]}/221 + {T221["ub"]} undefined in C')),
             unsafe=F.fig_unsafe(ST), cast=F.fig_cast(), ulp=F.fig_ulp(), storage=F.fig_storage(dict(ser, maxd_a=SO_MAXD_A)),
-            gate=F.fig_gate(fold(g221), gate_note), wasm=F.fig_wasm(wasm_rows, WN or 1), memdecks=F.fig_memdecks(deck_rows),
+            gate=F.fig_gate(fold(g221), gate_note), wasm=F.fig_wasm(wasm_rows, WN or 1, W_UB), memdecks=F.fig_memdecks(deck_rows),
             borrow=F.fig_borrow(), lists=F.fig_lists(), cio=F.fig_cio(cio_rows))
 if gco:
     FIGS['corpus'] = F.fig_gate(fold(gco), f'{TCO["n"]:,} of {N_CO:,} corpus models{GATE_CO_STATE}: {TCO["same"]:,} identical, {TCO["ub"]} undefined in C, {TCO["diff"]} different, {TCO["inc"]} inconclusive. Log scale.',
@@ -337,7 +369,8 @@ for b in E.BLOCKS:
     if k == 'h2':
         parts.append(f'<h2 id="{b[2]}">{html.escape(b[1])}</h2>'); toc.append([b[2], b[1]])
         essay_json['blocks'].append(dict(kind='h2', text=b[1]))
-    elif k == 'p':
+    elif k == 'p' or k.startswith('p?'):
+        if k.startswith('p?') and k[2:] not in NUM: continue      # a paragraph that needs a measurement not yet made
         parts.append('<p>' + sub(b[1]) + '</p>'); essay_json['blocks'].append(dict(kind='p', html=sub(b[1])))
     elif k == 'fig':
         if b[1] not in FIGS: missing.append(b[1]); continue
@@ -346,7 +379,10 @@ for b in E.BLOCKS:
         parts.append(f'<figure class="fig"><div class="frame">{FIGS[b[1]]}</div><figcaption>{cap}</figcaption></figure>')
         essay_json['blocks'].append(dict(kind='fig', key=b[1], caption=cap))
     elif k == 'code':
-        parts.append(code_html(b[2])); essay_json['blocks'].append(dict(kind='code', text=b[2]))
+        t = b[2]
+        if t.startswith('@@FUNC:'):                 # a function quoted verbatim from EPA's source
+            fn, sig = t[7:].split('|', 1); t = func(f'{EPA_SRC}/{fn}', sig)[0]
+        parts.append(code_html(t)); essay_json['blocks'].append(dict(kind='code', text=t))
     elif k == 'table':
         rows = [[sub(c) for c in r] for r in b[2]]
         parts.append('<div class="tablewrap"><table class="t"><thead><tr>' + ''.join(f'<th>{h}</th>' for h in b[1]) +
@@ -395,18 +431,18 @@ for key, p, name in SAMPLE_SPEC:
 # ------------------------------------------------------------------ verify
 parity = ('<b>Parity contract.</b> swmm5-rust matches EPA SWMM 5.2.4 built from the official v5.2.4 tag: the binary <code>.out</code> file byte for byte, '
           'and the <code>.rpt</code> file byte for byte after removing the three wall-clock lines (analysis begun, ended, elapsed). '
-          'Native: EPA compiled by GCC 13.3 at <code>-O2</code>, swmm5-rust by Rust 1.91 at <code>opt-level=2</code>, on x86-64 Linux; the gate passes absolute paths because EPA\'s own <code>getAbsolutePath()</code> overruns its buffer on relative ones. '
+          'Native: EPA compiled by GCC 13.3 at <code>-O2</code>, swmm5-rust by Rust 1.97 at <code>opt-level=2</code>, on x86-64 Linux; the gate passes absolute paths because EPA\'s own <code>getAbsolutePath()</code> overruns its buffer on relative ones. '
           'WebAssembly: EPA and swmm5-cplus by Clang 18 with wasi-libc, swmm5-rust by Rust 1.91 for wasm32-wasip1 linked against the same wasi-libc. '
           'Where EPA\'s C reads or writes memory it does not own, its output is undefined; those decks are counted apart, never as a match.')
 verify_tiles = [[f'{T221["same"]} / {T221["n"] - T221["ub"]}', f'smoke and coverage set, native, byte-identical; {T221["ub"]} more are undefined in C'],
                 [f'{TFC["same"]} / {TFC["n"]}', f'corpus models with FILLED_CIRCULAR conduits{"" if TFC["n"] >= N_FC else " (of " + str(N_FC) + ", running)"}'],
                 [f'{TCO["same"]:,} / {TCO["n"] - TCO["ub"] - TCO["inc"]:,}', f'corpus set, native{"" if TCO["n"] >= N_CO else f" ({TCO[chr(110)]:,} of {N_CO:,} run so far)"}'],
-                [f'{WS["rs"]} / {WN}', 'WebAssembly: swmm5-rust against EPA, same libc' + ('' if WN >= 221 else ' (running)')]]
+                [f'{WS["rs"]} / {WN}', f'WebAssembly: swmm5-rust against EPA, same libc; {W_UB} undefined decks apart' + ('' if WN_ALL >= 221 else ' (running)')]]
 controls = [
     'Null control: each engine run twice on the same input writes the same bytes, so identical output is reported as identical and the comparison stops there.',
     f'Positive control: before the FILLED_CIRCULAR fix the gate caught a difference of one float bit in {NUM["FP_DIFF"]} of {NUM["FP_VALS"]} .out values. The instrument sees one bit.',
-    f'Translation control: the c2rust crate, EPA\'s C transliterated statement for statement, matched EPA on {C2R_SAME} of 221 models once its float-to-int casts went through ccast. It is the reference the safe engine was checked against step by step (the lockstep tool compares every node, link and subcatchment state after every routing step).',
-    f'Platform control: EPA\'s C against itself, native glibc against wasi-libc, agrees on {WS["plat"]} of {WN} models; where it does not, the platform differs, not the engine.',
+    f'Translation control: the c2rust crate, EPA\'s C transliterated statement for statement, matched EPA on {C2R_SAME} of 221 models once its float-to-int casts went through ccast. The lockstep tool steps it beside the safe engine and compares every node, link and subcatchment state after every routing step: no difference on the sample models (results/lockstep_samples.log); on the engine before the FILLED_CIRCULAR fix it stops at step 29, conduit C0, new depth, last bit.',
+    f'Platform control: EPA\'s C against itself, native (GCC, glibc) against WebAssembly (Clang, wasi-libc), agrees on {WS["plat"]} of {WN} models with defined behaviour. The source is the same, so where it disagrees the platform is the cause; which library functions differ was not traced.',
     f'Undefined-behaviour control: the six memory-error decks are run in four builds (EPA and Rust, native and wasm). EPA\'s own answer changes with the platform on {sum(1 for r in deck_rows if r["epa_native"][1] != r["epa_wasm"][1])} of them, which is what undefined means; swmm5-rust\'s changes on {(lambda n: "none" if n == 0 else n)(sum(1 for r in deck_rows if r["rs_native"][1] != r["rs_wasm"][1]))}.',
     f'Library control: printf, strtod, atoi and sscanf rewritten in safe Rust were compared with glibc on about {sum(r[1] for r in cio_rows) / 1e6:.0f} million inputs.',
     'Section-order control: the RS-1 network is run in two section orders by all three engines; each engine agrees with EPA on each order, and the orders disagree with each other exactly as EPA does.',
@@ -427,7 +463,7 @@ prov = [['engine commit (gated binaries)', gate_commit], ['page built from commi
         ['swmm5rs.wasm sha256', sha_file(f'{W}/swmm5rs.wasm')], ['swmm5cplus.wasm sha256', sha_file(f'{W}/swmm5cplus.wasm')],
         ['swmm524_epa.wasm sha256', sha_file(f'{W}/swmm524_epa.wasm')],
         ['EPA reference', 'USEPA/Stormwater-Management-Model tag v5.2.4'],
-        ['native toolchains', 'GCC 13.3.0 -O2 (EPA); Rust 1.91 opt-level 2 (swmm5-rust)'],
+        ['native toolchains', 'GCC 13.3.0 -O2 (EPA); Rust 1.97.0 opt-level 2 (swmm5-rust)'],
         ['wasm toolchains', 'Clang 18.1.3 + wasi-libc (EPA, swmm5-cplus); Rust 1.91 wasm32-wasip1, std built from source, wasm-ld + the same wasi-libc'],
         ['in-browser file system', 'MemWasi: 19 WASI calls, in memory (this page)'],
         ['built', datetime.date.today().isoformat()]]
@@ -439,7 +475,7 @@ data = dict(samples=samples, figs=FIGS, insideTiles=tiles_inside, repr=repr_rows
             deckMatrix=[{k: v for k, v in r.items() if k != 'text'} for r in deck_rows],
             lid={k: dict(err=v['err'], rc=v['rc'], out_sha=v['out_sha']) for k, v in LID.items()},
             verify=dict(parity=parity, tiles=verify_tiles, controls=controls, limits=limits, csv=gate_csv,
-                        wasmBad=w_rs_bad, platBad=w_plat_bad),
+                        wasmBad=w_rs_bad, platBad=w_plat_bad, ubCorpus=UB_CORPUS, diffs=DIFF_LIST, inc=INC_LIST),
             prov=prov, commit=gate_commit, essayHtml=essay_html, toc=toc, stats=ST)
 
 DOCX = f'{HERE}/doc/out/swmm5-rust-doc.docx'
@@ -464,10 +500,10 @@ with open(f'{REPO}/docs/DEFECTS.md', 'w') as fo:
              'Generated by `app/build.py` from the same list the app\'s Inside tab shows; every code excerpt is taken from '
              'the v5.2.4 source at build time.\n\n'
              '* **RS-1 to RS-4** are reproduced on purpose: the output must match EPA byte for byte, defects included.\n'
-             '* **RS-5 to RS-9** are undefined behaviour in C (out-of-bounds or NULL accesses). EPA\'s output there depends on memory '
+             '* **RS-5 to RS-10** are undefined behaviour in C (out-of-bounds or NULL accesses). EPA\'s output there depends on memory '
              'and on the platform, so there is nothing to reproduce; swmm5-rust stops with a message naming the line, or, for RS-9, writes '
-             'the error report. The gate counts these decks apart, never as matches.\n\n'
+             'the error report, or, for RS-10, reads 0.0 where C reads far outside a table. The gate counts these decks apart.\n\n'
              'Other places where C\'s behaviour is undefined, and what the Rust does there, are listed in [UNDEFINED.md](UNDEFINED.md).\n\n')
     for d in defects:
-        fo.write(f"## {d['id']}: {md(d['title'])}\n\n*Status: {d['status']}. Where: {d['where']}.*\n\n{md(d['body'])}\n\n```c\n{d['code']}\n```\n\n")
+        fo.write(f"## {d['id']}: {md(d['title'])}\n\n*Status: {d['status']}. Where: {d['where']}.*\n\n{md(d['body'])}\n\n{md(d.get('also', ''))}\n\n```c\n{d['code']}\n```\n\n")
 print('wrote docs/DEFECTS.md')

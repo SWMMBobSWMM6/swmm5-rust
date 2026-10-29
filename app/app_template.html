@@ -58,7 +58,8 @@ button{font:inherit;cursor:pointer}
 .wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
 header.top{background:var(--headerbg);color:var(--onheader);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
-header.top .wrap{display:flex;align-items:center;gap:var(--gap);padding-block:12px;flex-wrap:wrap}
+header.top > .wrap{display:flex;align-items:center;gap:var(--gap);padding-block:12px;flex-wrap:wrap}
+@media (max-width:700px){header.top{position:static} .lockup .pill{display:none}}
 .lockup{display:flex;align-items:center;gap:12px;min-width:0}
 .lockup svg{flex:none}
 .lockup h1{font:700 26px/1 var(--font-display);font-stretch:85%;margin:0;letter-spacing:.2px;color:var(--onheader)}
@@ -73,7 +74,7 @@ header .seg button{color:var(--headersub)}
 .hbtn{background:transparent;border:1px solid var(--btn-dark);color:var(--onheader);border-radius:8px;padding:6px 10px;font-size:12px}
 .hbtn:hover{border-color:var(--onheader)}
 nav.tabs{background:var(--headerbg);border-top:1px solid var(--btn-dark)}
-nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
 nav.tabs button{background:none;border:0;color:var(--headersub);padding:10px 14px;font-size:13px;border-bottom:3px solid transparent;white-space:nowrap}
 nav.tabs button[aria-selected="true"]{color:var(--onheader);border-bottom-color:var(--tab-on);font-weight:600}
 
@@ -351,7 +352,7 @@ footer.prov b{color:var(--ink)}
       <div class="tablewrap" style="margin-top:12px"><table class="t" id="decksTable"><tbody><tr><td class="muted">Run the decks to fill this table.</td></tr></tbody></table></div>
       <div class="figwrap" style="margin-top:12px" id="figDecksIn"></div>
     </div>
-    <div class="card"><h2>Defect register</h2><p class="muted" style="margin:0 0 10px">What the translation found in EPA 5.2.4. Each entry shows the C as it is in the v5.2.4 source. RS-1 to RS-4 are reproduced on purpose; RS-5 to RS-9 are undefined in C, so there is nothing to reproduce.</p><div class="stack" id="defects"></div></div>
+    <div class="card"><h2>Defect register</h2><p class="muted" style="margin:0 0 10px">What the translation found in EPA 5.2.4. Each entry shows the C as it is in the v5.2.4 source. RS-1 to RS-4 are reproduced on purpose; RS-5 to RS-10 are undefined in C, so there is nothing to reproduce.</p><div class="stack" id="defects"></div></div>
   </div>
 </section>
 
@@ -364,6 +365,7 @@ footer.prov b{color:var(--ink)}
     <div class="card" id="corpusCard" hidden><h2>Native gate: the corpus set, by folder</h2><div class="figwrap" id="figCorpusV"></div></div>
     <div class="card"><h2>WebAssembly gate, with the platform control</h2><div class="figwrap" id="figWasmV"></div><p class="faint" id="wasmNote" style="margin:8px 0 0"></p></div>
     <div class="card"><h2>The six memory-error decks in four builds</h2><div class="figwrap" id="figDecksV"></div></div>
+    <div class="card"><h2>Every model not counted identical</h2><div id="notSame"></div></div>
     <div class="card"><h2>Controls that ran</h2><div id="controls"></div></div>
     <div class="card"><h2>C's text routines, checked against glibc</h2><div class="figwrap" id="figCioV"></div></div>
     <div class="card" id="timingCard" hidden><h2>Run time, with the noise floor</h2><div class="figwrap" id="figTimingV"></div><div class="figwrap" style="margin-top:12px" id="figTimingW"></div></div>
@@ -881,7 +883,7 @@ function showCode() {
   });
 }
 $('#codeSel').addEventListener('change', showCode); showCode();
-$('#defects').innerHTML = D.defects.map(d => `<div class="defect"><div class="h"><span class="id">${d.id}</span><span>${esc(d.title)}</span><span class="tag ${d.statusKind}">${esc(d.status)}</span></div><p style="margin:6px 0">${d.body}</p><p class="faint" style="margin:0">${esc(d.where)}, EPA 5.2.4 as released:</p>${d.code ? '<pre class="code">' + esc(d.code) + '</pre>' : ''}</div>`).join('');
+$('#defects').innerHTML = D.defects.map(d => `<div class="defect"><div class="h"><span class="id">${d.id}</span><span>${esc(d.title)}</span><span class="tag ${d.statusKind}">${esc(d.status)}</span></div><p style="margin:6px 0">${d.body}</p>${d.also ? `<p class="muted" style="margin:0 0 6px">${esc(d.also)}</p>` : ''}<p class="faint" style="margin:0">${esc(d.where)}, EPA 5.2.4 as released:</p>${d.code ? '<pre class="code">' + esc(d.code) + '</pre>' : ''}</div>`).join('');
 
 // RS-1 live: both orders, all three engines
 let STORAGE = null;
@@ -941,6 +943,8 @@ $('#figWasmV').innerHTML = D.figs.wasm; $('#figDecksV').innerHTML = D.figs.memde
 $('#wasmNote').textContent = (D.verify.wasmBad.length ? 'Models where swmm5-rust\'s WebAssembly output differs from EPA\'s: ' + D.verify.wasmBad.join(', ') + '. ' : '') +
   (D.verify.platBad.length ? 'Models where EPA\'s C differs from itself between native and WebAssembly: ' + D.verify.platBad.join(', ') + '.' : '');
 if (D.figs.timing) { $('#timingCard').hidden = false; $('#figTimingV').innerHTML = D.figs.timing; $('#figTimingW').innerHTML = D.figs.timing_wasm || ''; }
+{ const V = D.verify, li = a => a.length ? '<ul style="margin:4px 0 10px;padding-left:18px">' + a.map(x => `<li><code>${esc(x)}</code></li>`).join('') + '</ul>' : '<p class="muted" style="margin:4px 0 10px">none</p>';
+  $('#notSame').innerHTML = `<p class="kicker">Different from EPA where EPA's behaviour is defined</p>${li(V.diffs)}<p class="kicker">Inconclusive: a run hit the time cap</p>${li(V.inc)}<p class="kicker">Undefined in C: the six decks of the smoke and coverage set</p><p class="muted" style="margin:4px 0 10px">IO-23_no-gages, CRASH-02_xsect-before-weir, CRASH-03_empty-curve, CRASH-04_quoted-shape, CRASH-08_expr-bad-option, CRASH-08_expr-duplicate-id</p><p class="kicker">Undefined in C: corpus models that crash EPA natively, or are one of the six</p>${li(V.ubCorpus)}`; }
 $('#controls').innerHTML = '<ul style="margin:0;padding-left:18px">' + D.verify.controls.map(c => `<li style="margin-bottom:6px">${c}</li>`).join('') + '</ul>';
 $('#limitsBox').innerHTML = D.verify.limits;
 

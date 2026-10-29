@@ -1,0 +1,6 @@
+open: C=0 Rust=0
+start: C=0 Rust=0
+step       29  t=0.0016261574  Link.newDepth                C0                       C=7.244736162390254e-3     Rust=7.244736162390255e-3    
+1 differences in step 29; stopping here.
+.out files: identical (635 vs 635 bytes)
+.rpt files: identical (197 lines)

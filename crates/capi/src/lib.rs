@@ -3,8 +3,10 @@
 //! EPA SWMM 5.2.4's `swmm_*` entry points over the safe engine, plus a
 //! handle-based twin of each (`swmm5rs_*`) so one process or one WebAssembly
 //! instance can hold many models. This file is the only `unsafe` code in
-//! swmm5-rust: it turns C pointers from the caller into Rust slices and
-//! back. Every call into the engine is safe Rust.
+//! the engine and its interface (the test crates that call glibc or the
+//! c2rust baseline for comparison use it too, and do not ship): it turns C
+//! pointers from the caller into Rust slices and back. Every call into the
+//! engine is safe Rust.
 use std::ffi::{c_char, c_int, CStr};
 use std::sync::Mutex;
 use swmm5_rust::swmm5 as api;

@@ -46,7 +46,7 @@ def legend(b, x, y, items, size=11):
 def fig_pipeline(st):
     W, H = 820, 300
     b = [ARROW.format(id='ap1'), text(24, 30, 'From C to safe Rust: two translations, and the output bytes judge both', 14, weight=600)]
-    boxes = [('EPA SWMM 5.2.4', f'{st["c_files"]} .c files', f'{st["c_lines"]:,} lines of C'),
+    boxes = [('EPA SWMM 5.2.4', f'{st["c_files"]} .c files', f'{st["c_lines_c"]:,} lines of C'),
              ('c2rust', 'mechanical, unsafe', f'{st["c2r_fns"]:,} unsafe fns'),
              ('skeleton', 'types, Project,', 'stubs, rule book'),
              ('54 modules', 'translated one by one', 'in 10 parallel batches'),
@@ -80,7 +80,7 @@ def fig_unsafe(st):
     L, R = 250, 780
     b = [text(24, 30, 'Where the unchecked code is', 14, weight=600),
          text(24, 48, 'Bar length: lines of source. Dark part: code the compiler cannot check for memory safety.', 11, 'var(--f-dim)')]
-    rows = [('EPA SWMM 5.2.4 (C)', st['c_lines'], st['c_lines'], 'all of it: C has no safe subset', 'var(--epa)'),
+    rows = [('EPA SWMM 5.2.4 (C)', st['c_lines'], st['c_lines'], f'all of it: C has no safe subset ({st["c_files"]} .c files and {st["c_other"]} headers and tables)', 'var(--epa)'),
             ('c2rust translation', st['c2r_lines'], st['c2r_lines'], f'{st["c2r_fns"]:,} of {st["c2r_fns"]:,} functions unsafe; {st["c2r_statics"]:,} static mut', 'var(--f-d)'),
             ('swmm5-rust engine', st['rs_lines'], 0, '#![forbid(unsafe_code)]: none, and none allowed', 'var(--rs)'),
             ('C interface for callers', st['capi_lines'], st['capi_lines'], f'{st["capi_unsafe"]} unsafe blocks: pointers in, slices out', 'var(--f-e)')]
@@ -221,12 +221,13 @@ def fig_gate(folders, title_note, title='The native gate: every model run by EPA
     return svg(W, H, ''.join(b), 'Native gate results by folder')
 
 # ----------------------------------------------------------------- F7 wasm agreement
-def fig_wasm(rows, n):
+def fig_wasm(rows, n, ub=0):
     """rows: list of (label, sublabel, same_count, color)"""
     W, H = 820, 110 + 46 * len(rows)
     L, R = 330, 760
     b = [text(24, 28, f'In the browser: {n} models through three engines compiled to WebAssembly', 14, weight=600),
-         text(24, 46, 'Each bar: models whose .out matches byte for byte and whose .rpt matches line for line (wall-clock lines removed).', 11, 'var(--f-dim)')]
+         text(24, 46, 'Each bar: models whose .out matches byte for byte and whose .rpt matches line for line (wall-clock lines removed)'
+              + (f'; the {ub} decks undefined in C are left out.' if ub else '.'), 11, 'var(--f-dim)')]
     X = lambda v: (R - L) * v / n
     for i, (lab, sub, same, col) in enumerate(rows):
         y = 70 + i * 46
@@ -235,7 +236,7 @@ def fig_wasm(rows, n):
         b.append(f'<rect x="{L}" y="{y}" width="{R - L}" height="18" rx="3" fill="var(--f-soft)" stroke="var(--f-line)"/>')
         b.append(f'<rect x="{L}" y="{y}" width="{max(X(same), 2):.1f}" height="18" rx="3" fill="{col}"/>')
         b.append(text(L, y + 33, f'{same} of {n}', 11, 'var(--f-dim)'))
-    b.append(text(24, H - 14, 'The platform row is EPA\'s own C against itself: native glibc against wasi-libc. Where it differs, the platform differs, not the engine.', 11, 'var(--f-dim)'))
+    b.append(text(24, H - 14, 'The platform row is EPA\'s own C against itself, GCC and glibc against Clang and wasi-libc: the same source, so a difference there is the platform\'s.', 11, 'var(--f-dim)'))
     return svg(W, H, ''.join(b), 'WebAssembly parity of three engines')
 
 # ----------------------------------------------------------------- F8 six decks

@@ -1,0 +1,15 @@
+== /home/claude/work/corpus1729/EPA/extran1_egg.inp
+start: C=0 Rust=0
+no state difference in 1440 steps
+.out files: identical (16342 vs 16342 bytes)
+.rpt files: identical (1059 lines)
+== tests/models/filled_circ_drift.inp
+start: C=0 Rust=0
+no state difference in 4323 steps
+.out files: identical (32603 vs 32603 bytes)
+.rpt files: identical (1576 lines)
+== tests/models/storage_order_A.inp
+start: C=0 Rust=0
+no state difference in 1440 steps
+.out files: identical (32670 vs 32670 bytes)
+.rpt files: identical (1244 lines)
