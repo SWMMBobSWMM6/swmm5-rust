@@ -1,0 +1,14 @@
+[package]
+name = "swmm5-c2rust"
+description = "EPA SWMM 5.2.4 transpiled by c2rust 0.22.1, made to build on stable Rust. Baseline for swmm5-rust, never edited by hand."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "swmm5_c2rust"
+path = "src/lib.rs"
+
+[[bin]]
+name = "runswmm-c2rust"
+path = "src/main.rs"

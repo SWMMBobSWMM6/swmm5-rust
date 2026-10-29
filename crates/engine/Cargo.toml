@@ -1,0 +1,13 @@
+[package]
+name = "swmm5-rust"
+description = "EPA SWMM 5.2.4 in safe Rust: every simulation an object, no unsafe code, byte-identical results"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "swmm5_rust"
+path = "src/lib.rs"
+
+[dev-dependencies]
+libc = "0.2"
