@@ -13,7 +13,8 @@ for (const m of process.argv.slice(3)) {
     try { r = C.runLegacy(M[k], name, files); } catch (e) { r = { rc: 'throw', trap: String(e.message) }; }
     const rpt = r.rpt ? Buffer.from(r.rpt).toString('latin1') : '';
     const err = (rpt.match(/ERROR[^\n]*/) || [''])[0].trim();
+    const rptNorm = rpt.split('\n').filter(l => !/Analysis begun on|Analysis ended on|Total elapsed time/.test(l)).join('\n');
     console.log(JSON.stringify({ model: name, engine: k, rc: r.rc, trap: r.trap || '', panic: r.panic || '',
-      rpt: (r.rpt || []).length, out: (r.out || []).length, out_sha: sha(r.out), err }));
+      rpt: (r.rpt || []).length, rpt_sha: sha(Buffer.from(rptNorm, 'latin1')), out: (r.out || []).length, out_sha: sha(r.out), err }));
   }
 }

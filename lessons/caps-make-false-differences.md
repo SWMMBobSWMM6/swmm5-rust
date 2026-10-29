@@ -8,7 +8,7 @@ named the allocation; rerun without the cap (`gate.py --mem 0`), the outputs are
 narrow departure, documented in the README: out of memory, C reports and Rust stops.
 
 Why 3.4 GB: `getMaxPeriods()` in rdii.c keeps `tBase / rainInterval + 1` past rainfall values per unit hydrograph, and
-`getRainInterval()` starts from the wet step. The model has 613 hydrographs whose long-term response (T = 900 h, K = 10) has a
-9,900-hour base; at its 1-minute wet step that is 594,001 periods each, 8 bytes in `pastRain` and 1 in `pastMonth`, for a run
-that lasts 4 days. Of the model's 1,839 unit-hydrograph rows only 60 have a nonzero response ratio R; `getMaxPeriods()` sizes the history
+`getRainInterval()` starts from the wet step. 603 of the model's 613 hydrographs have a long-term response (T = 900 h, K = 10)
+with a 9,900-hour base; at its 1-minute wet step that is 594,001 periods each, 8 bytes in `pastRain` and 1 in `pastMonth`, for
+a run of just under five days. Of the model's 1,839 unit-hydrograph rows only 60 have a nonzero response ratio R; `getMaxPeriods()` sizes the history
 from `tBase` alone, so most of that memory holds rainfall that is later multiplied by zero.

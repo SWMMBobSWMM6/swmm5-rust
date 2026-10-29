@@ -1,0 +1,9 @@
+{"model":"CRASH-07_nan-diameter.inp","engine":"epa","rc":0,"trap":"","panic":"","rpt":6567,"rpt_sha":"9c67d78bd8e15b81","out":468,"out_sha":"80876a7e3c019c8f","err":""}
+{"model":"CRASH-07_nan-diameter.inp","engine":"cplus","rc":0,"trap":"","panic":"","rpt":6567,"rpt_sha":"15da267dbd54be58","out":468,"out_sha":"dcdd6f2961036633","err":""}
+{"model":"CRASH-07_nan-diameter.inp","engine":"rust","rc":0,"trap":"","panic":"","rpt":6567,"rpt_sha":"15da267dbd54be58","out":468,"out_sha":"dcdd6f2961036633","err":""}
+{"model":"CRASH-07_nan-initflow.inp","engine":"epa","rc":0,"trap":"","panic":"","rpt":6567,"rpt_sha":"db6f14ee07d9b51c","out":468,"out_sha":"be850bb3a71212a9","err":""}
+{"model":"CRASH-07_nan-initflow.inp","engine":"cplus","rc":0,"trap":"","panic":"","rpt":6567,"rpt_sha":"db6f14ee07d9b51c","out":468,"out_sha":"be850bb3a71212a9","err":""}
+{"model":"CRASH-07_nan-initflow.inp","engine":"rust","rc":0,"trap":"","panic":"","rpt":6568,"rpt_sha":"db6f14ee07d9b51c","out":468,"out_sha":"be850bb3a71212a9","err":""}
+{"model":"CRASH-07_tiny-diameter.inp","engine":"epa","rc":0,"trap":"","panic":"","rpt":7635,"rpt_sha":"6d6b648cd2410b24","out":468,"out_sha":"09e6457bc41bd6ef","err":""}
+{"model":"CRASH-07_tiny-diameter.inp","engine":"cplus","rc":0,"trap":"","panic":"","rpt":7635,"rpt_sha":"6d6b648cd2410b24","out":468,"out_sha":"09e6457bc41bd6ef","err":""}
+{"model":"CRASH-07_tiny-diameter.inp","engine":"rust","rc":0,"trap":"","panic":"","rpt":7635,"rpt_sha":"6d6b648cd2410b24","out":468,"out_sha":"09e6457bc41bd6ef","err":""}

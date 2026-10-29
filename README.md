@@ -48,11 +48,11 @@ Written by `app/build.py` from `results/`; the app's Verify tab and the Doc essa
 
 Inconclusive: `OpenSWMM_Code_Review_2026/4-io/IO-02-time-options-accept-nan-inf-huge/IO-02_end-time-1e30.inp` (IO-02 in the code review: END_TIME 1e30 hours puts the end 4.2e28 days after the start, so EPA's own run does not end; not rerun), `Simon_EPA/Session38_100_Control_Rules.inp` (it reports every minute for eleven days; run with no time cap, both engines stopped at the gate's 2 GiB file-size cap, and the first 2,147,483,648 bytes of the two .out files are identical)
 
-Native run time over 12 models (`tools/bench3.py`, CPU seconds, median of 5 interleaved runs of EPA, C++, Rust, EPA): swmm5-rust 1.12× EPA at the median, swmm5-cplus 0.94×; on ten of the twelve it is slower by more than EPA differs from itself on the same model; on two the difference is inside that noise (Rust).
+Native run time over 12 models (`tools/bench3.py`, CPU seconds, median of 5 interleaved runs of EPA, C++, Rust, EPA): swmm5-rust 1.12× EPA at the median, swmm5-cplus 0.94×; on ten of the twelve its median is slower by more than EPA's own two medians differ on the same model; on two the difference is inside that noise (Rust).
 
 Instruction counts (callgrind, `tools/profile.py`, results/profile.json): swmm5-rust executes 23% more on `manifold_pumps.inp`, 20% more on `46_Subs.inp`, 26% more on `10_Subs_Continuous.inp`, 11% more on `Peter Klaver_WQ_Tracer.inp` than EPA. On `manifold_pumps.inp` 37 percent of the extra is in xsect.c's `lookup()` (35.5 instructions a call in EPA, 62.1 in swmm5-rust, 22,640,867 calls in each).
 
-WebAssembly run time in node over 12 models (`app/bench_wasm.js`): swmm5-rust 1.36× EPA at the median, swmm5-cplus 0.99×; on all twelve it is slower by more than EPA differs from itself on the same model (Rust).
+WebAssembly run time in node over 12 models (`app/bench_wasm.js`): swmm5-rust 1.36× EPA at the median, swmm5-cplus 0.99×; on all twelve its median is slower by more than EPA's own two medians differ on the same model (Rust).
 <!-- /RESULTS -->
 
 ## Defects found
@@ -63,7 +63,7 @@ WebAssembly run time in node over 12 models (`app/bench_wasm.js`): swmm5-rust 1.
 
 * `getAbsolutePath()`: C copies up to PATH_MAX bytes into the 260-byte `InpDir`; the Rust truncates to the buffer. (EPA's own runswmm aborts under glibc fortify on relative paths, so the gate passes absolute ones.)
 * Scratch files: C's Linux branch creates `swmmXXXXXX` in the current directory. The Rust uses the TEMPDIR option if set, as EPA's Windows branch does, otherwise the system temporary directory, and on WASI the current directory. The name never reaches the outputs.
-* Running out of memory: where C checks an allocation and reports ERROR 101 when it fails, a Rust `Vec` that cannot be allocated stops the program with "memory allocation failed" and no report. Given the memory, the two agree: `Hydrology/sewer_rdii_problem.inp` asks both engines for 3.4 GB of RDII rainfall history (613 unit hydrographs whose long-term response, T = 900 h and K = 10, has a 9,900-hour base, kept at the 1-minute wet step: 594,001 past-rainfall periods apiece, for a 4-day run), so under the gate's 3 GiB address-space cap EPA reported ERROR 101 and the Rust stopped; rerun without the cap (`results/rs_memcap_rerun.jsonl`) the outputs are byte-identical.
+* Running out of memory: where C checks an allocation and reports ERROR 101 when it fails, a Rust `Vec` that cannot be allocated stops the program with "memory allocation failed" and no report. Given the memory, the two agree: `Hydrology/sewer_rdii_problem.inp` asks both engines for 3.4 GB of RDII rainfall history (603 of its 613 unit hydrographs have a long-term response with T = 900 h and K = 10, a 9,900-hour base, kept at the 1-minute wet step: 594,001 past-rainfall periods apiece, for a run of just under five days), so under the gate's 3 GiB address-space cap EPA reported ERROR 101 and the Rust stopped; rerun without the cap (`results/rs_memcap_rerun.jsonl`) the outputs are byte-identical.
 * `controls_delete()` after an early input error (CRASH-08): C walks a NULL array and crashes; the Rust finds an empty vector and writes the error report.
 
 ## Building

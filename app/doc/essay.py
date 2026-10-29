@@ -210,9 +210,9 @@ BLOCKS = [
       "Mostly the choice was to stop. In one place it was not. SWMM's cross-section tables are read through a function that "
       "turns a ratio into an index with no check, and a NaN or a huge ratio sends C sixteen gigabytes below the table. The "
       "corpus has decks for it, CRASH-07 in the same review. Natively EPA dies; in WebAssembly it reads whatever is there and "
-      "runs on. The Rust reads 0.0 and runs on too, because for a NaN ratio the answer is NaN whatever is read. On one of those "
-      "decks all three WebAssembly engines then agree byte for byte; on the other, EPA's WebAssembly build read something "
-      "different. Neither counts as a match. The defect register lists it as RS-10, choice and all."),
+      "runs on. The Rust reads 0.0 and runs on too, because for a NaN ratio the answer is NaN whatever is read. On two of the "
+      "three decks all three WebAssembly engines then agree byte for byte; on the third, EPA's WebAssembly build read something "
+      "different. None of them counts as a match. The defect register lists it as RS-10, choice and all."),
 ('p', "These six, every corpus deck that crashes EPA natively, and the corpus's second deck for the CRASH-02 fault are counted apart in every swmm5-rust tally in this essay "
       "and in the app, and the Verify tab lists them by name. They are not failures of the translation and "
       "they are not matches either. They are the reason the translation was worth doing."),
@@ -227,14 +227,14 @@ BLOCKS = [
         "<b>Every corpus model with a FILLED_CIRCULAR conduit</b>, the shape that taught us about the bit: {FC_RESULT}.",
         "<b>The corpus set</b> that swmm5-cplus was gated on, {NCO} models from Bob's 1729-SWMM5-Models-2030 collection (every "
         "model under 125 KB and a seeded sample of larger ones): {CORPUS_RESULT}."]),
-('p?HC_RESULT', "Those three sets ran on the binary built before one last change to the engine. A control rule can read a "
+('p?HC_RESULT', "Those three sets ran first on the binary built before one last change to the engine. A control rule can read a "
       "link's velocity, and C works it out through a pointer to the link's own cross-section, the same pointer that lets "
       "FILLED_CIRCULAR edit that section by a bit. The Rust had used a read-only copy there, on an argument that the edit could not matter by then; "
       "an argument is not a test, so it now calls the function C calls. Built from the source as it stands, the engine went through "
-      "the {N221} smoke and coverage models again and every other gated model with control rules but the ten that had hit the time cap, "
-      "{NHC} in all: {HC_RESULT}. The WebAssembly runs below are that build too."),
+      "the {N221} smoke and coverage models again and {NHC_OTHER} other gated models with control rules, {NHC} in all: {HC_RESULT}. "
+      "Ten slower rule models went to the long rerun below instead. The WebAssembly runs below are that build too."),
 ('p?TO_RESULT', "Some runs never got an answer. Two cores shared by several gates make every run slower, and the biggest models "
-      "hit the five-minute cap in one engine or both. Those, the ten rule models among them, were run again with "
+      "hit the five-minute cap in one engine or both. Those sixteen, among them the ten rule models held back from the check above, were run again with "
       "the engine as it stands, two at a time on a machine doing nothing else, with an hour each: {TO_RESULT}."),
 ('fig', 'gate', "The smoke and coverage set by folder. Log scale, because the folders differ in size by two orders of magnitude."),
 ('fig', 'corpus', "The corpus set by folder."),
@@ -265,7 +265,7 @@ BLOCKS = [
       "whether the machine is idle or busy, so it could be taken while the gates ran. On {P_N} models swmm5-rust executes "
       "{P_RANGE} more instructions than EPA. On {P_MODEL}, a dynamic-wave model, the counts are {P_EPA} and {P_RS}."),
 ('fig', 'profile', "Instruction counts for the ten busiest functions of one run. The same libm <code>pow</code>, <code>sin</code>, "
-        "<code>cos</code> and <code>sincos</code> serve both engines and count the same, so they are left out."),
+        "<code>cos</code> and <code>sincos</code> serve both engines and count within a few hundred instructions of each other, so they are left out."),
 ('p?P_MODEL', "The first thing the counts show is not a cost at all. Of the {P_BOTH} engine functions that both builds keep as "
       "functions of their own on those models, {P_SAMECALLS} are called exactly as many times in one as in the other. The other "
       "{P_DIFFN} are small ones, date arithmetic, keyword matching, number parsing, a few setters and wrappers, that one compiler "
@@ -281,14 +281,14 @@ BLOCKS = [
       "clamps a value that does not fit and turns NaN into zero, where that instruction gives the most negative integer for both, "
       "and <code>ccast</code> then puts the instruction's answer back, because the bits have to match. That is eleven of the "
       "{P_LOOKUP_EXTRA} extra instructions a call, and it is the price of copying C exactly, not of safety. Most of the rest is "
-      "the table. C reads <code>table[i]</code> and its neighbours without asking whether they exist; the Rust checks each read, "
-      "a comparison and a branch that is never taken, and returns 0.0 for a read outside the table where C would read whatever "
-      "lay there (RS-10). Twenty-odd million calls make them count. (<code>results/lookup_disasm.txt</code> has both functions "
+      "the table. C reads <code>table[i]</code> and its neighbours without asking whether they exist; the Rust checks each of those "
+      "reads, a comparison and a branch that is never taken, and returns 0.0 for one outside the table where C would read "
+      "whatever lay there (RS-10). Twenty-odd million calls make them count. (<code>results/lookup_disasm.txt</code> has both functions "
       "as compiled.)"),
 ('p?P2_MODEL', "One more item is not safety at all but a translation choice. EPA's output writer hands each object's results to the C "
       "library's file buffer. The translation gathers them into a small vector of bytes first and frees it after, a fresh "
       "allocation for every object at every reporting step. On {P2_MODEL}, a continuous simulation that reports often, that comes "
-      "to {P2_ALLOC_RS} memory allocations against EPA's {P2_ALLOC_EPA}, {P2_ALLOC_W} of them in the writer, and the writer, with everything it calls, costs "
+      "to {P2_ALLOC_RS} calls to <code>malloc</code> against EPA's {P2_ALLOC_EPA}, {P2_ALLOC_W} of them from the writer, and the writer, with everything it calls, costs "
       "{P2_OUT_RS} instructions against EPA's {P2_OUT_EPA}: {P2_SHARE} of the difference on that model. A buffer kept from one "
       "write to the next would remove most of it and write the same bytes, and the gate would be the judge of that."),
 ('p?P_MODEL', "The rest of the difference is spread thin over the dynamic-wave loop, the node flow updates and the flow "

@@ -254,9 +254,18 @@ if ghc:
     NUM['HC_RESULT'] = ((f"all {N_HC} run" if THC['n'] >= N_HC else f"{THC['n']} of {N_HC} run when this was built") + f", {THC['same']} identical"
                         + (f", {THC['ub']} undefined in C" if THC['ub'] else '') + (f", {THC['diff']} different" if THC['diff'] else ', none different')
                         + (f", {THC['inc']} inconclusive at the time cap" if THC['inc'] else ''))
-    NUM['NHC'] = N_HC
+    NUM['NHC'] = N_HC; NUM['NHC_OTHER'] = N_HC - T221['n']
 NUM['CO_DONE'] = 'all' if TCO['n'] >= N_CO else f"{TCO['n']:,} of the"
-NUM['CORPUS_RESULT'] = (f"all {N_CO:,} run, {TCO['same']:,} identical" + (f", {TCO['ub']} undefined in C" if TCO['ub'] else '') + (f", {TCO['diff']} different" if TCO['diff'] else '') + (f", {TCO['inc']} inconclusive at the time cap" if TCO['inc'] else '')
+_INC_SHORT = {'IO-02_end-time-1e30.inp': 'the IO-02 deck, whose run would last 4.2e28 days',
+              'Session38_100_Control_Rules.inp': 'a control-rules model stopped at the 2 GiB file-size cap, below'}
+def inc_short(rows):
+    xs = []
+    for r in rows:
+        if classify(r) != 'inc': continue
+        n = r['inp'].split('/')[-1]
+        xs.append(_INC_SHORT.get(n, f"<code>{html.escape(n)}</code>, at the " + ('file-size cap' if r.get('rc_ref') == -25 or r.get('rc_test') == -25 else 'memory cap' if -9 in (r.get('rc_ref'), r.get('rc_test')) else 'time cap')))
+    return '; '.join(xs)
+NUM['CORPUS_RESULT'] = (f"all {N_CO:,} run, {TCO['same']:,} identical" + (f", {TCO['ub']} undefined in C" if TCO['ub'] else '') + (f", {TCO['diff']} different" if TCO['diff'] else '') + (f", {TCO['inc']} inconclusive (" + inc_short(gco) + ")" if TCO['inc'] else '')
                         if TCO['n'] >= N_CO else f"{TCO['n']:,} run when this was built, {TCO['same']:,} of them identical" if TCO['n'] else "still running when this was built")
 if bench_n:
     NUM.update(dict(T_RS=f"{bench_n['summary']['rs_median']:.2f}", T_CP=f"{bench_n['summary']['cp_median']:.2f}",
@@ -278,7 +287,7 @@ def speed_words(med):
     return f'{100 * (med - 1):.0f} percent longer' if med > 1 else f'{100 * (1 - med):.0f} percent shorter'
 def noise_clause(c, n):
     parts = []
-    if c['slower']: parts.append(f"on {'all ' + _nw(n) if c['slower'] == n else _nw(c['slower']) + ' of the ' + _nw(n)} it is slower by more than EPA differs from itself on the same model")
+    if c['slower']: parts.append(f"on {'all ' + _nw(n) if c['slower'] == n else _nw(c['slower']) + ' of the ' + _nw(n)} its median is slower by more than EPA's own two medians differ on the same model")
     if c['faster']: parts.append(f"on {_nw(c['faster'])} it is faster by more than that")
     if c['noise']: parts.append(f"on {_nw(c['noise'])} the difference is inside that noise")
     return '; '.join(parts)
@@ -289,8 +298,8 @@ if bench_n:
     NUM['SPEED_NATIVE'] = speed_words(_m)
     NUM['T_TEXT'] = (f"Natively, over {_nw(_N)} models, swmm5-rust's median run time is {NUM['T_RS']} times EPA's, {NUM['SPEED_NATIVE']}. "
                      f"Model by model the ratio runs from {min(_rs):.2f} to {max(_rs):.2f}; {noise_clause(_c, _N)}. The noisiest model, "
-                     f"<code>{html.escape(_noisiest['model'])}</code>, differs from itself by {100 * abs(_noisiest['floor'] - 1):.0f} percent between "
-                     f"two runs of EPA, so a single ratio means little without its own floor. swmm5-cplus, built with link-time "
+                     f"<code>{html.escape(_noisiest['model'])}</code>, has its two EPA medians {100 * abs(_noisiest['floor'] - 1):.0f} percent apart, and single runs "
+                     f"scatter far more than medians do, so one ratio means little without its own floor. swmm5-cplus, built with link-time "
                      f"optimisation, comes in at a median of {NUM['T_CP']}.")
     if _c['slower'] > _N / 2:
         NUM['LIMIT_SPEED'] = (f"It is not faster than the C. Natively its median run time is {NUM['SPEED_NATIVE']} than EPA's, and it is slower "

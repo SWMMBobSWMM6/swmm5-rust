@@ -50,6 +50,7 @@ WebAssembly gate records (`tools/wasm_gate3.py`): `rs_out`/`rs_rpt` (swmm5-rust 
 | `unit_tests.log` | cio against glibc (8.2 million printf float conversions and more) and the difftest suite (14 tests) |
 | `bench_native.json`, `bench_wasm.json` | timing: interleaved EPA, C++, Rust, EPA runs with the EPA-against-EPA noise floor (`tools/bench3.py`, `app/bench_wasm.js`) |
 | `profile.json`, `profile_work/` | instruction counts per function (own and inclusive), calls per function and every caller-to-callee call count, EPA against swmm5-rust, from callgrind (`tools/profile.py`); the `.cg` files are callgrind's own output |
+| `crash07_wasm.jsonl` | the three CRASH-07 decks through the three WebAssembly engines (`app/run_decks.js`, digests of `.out` and of `.rpt` less the wall-clock lines): all three agree on two decks; on `CRASH-07_nan-diameter.inp` EPA's build differs. Natively EPA dies on all three |
 | `lookup_disasm.txt` | `xsect.c`'s `lookup()` as compiled in both binaries: EPA's one `cvttsd2si` against the Rust's twelve instructions for the same conversion, and the Rust's table-read checks |
 | `memcap_models.txt`, `rs_memcap_rerun.jsonl` | models that ask for more than the gate's 3 GiB address-space cap, rerun without it (`gate.py --mem 0`): under the cap EPA reports ERROR 101 and the Rust stops with "memory allocation failed" |
 | `nocap_models.txt`, `rs_nocap_rerun.jsonl` | models EPA itself cannot finish inside the one-hour cap, run with no time cap, EPA and the engine as it stands side by side, one core each (`gate.py --timeout 0 --pair`) |
