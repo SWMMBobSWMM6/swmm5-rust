@@ -1726,26 +1726,22 @@ pub fn report_writeErrorMsg(prj: &mut Project, code: i32, s: &[u8]) {
 //  Output:  none
 //  Purpose: writes error message to report file.
 //
-    // C: lid.c passes the global Msg itself as s. error_getMsg(code, Msg)
-    // then overwrites Msg with the message template before fprintf (and
-    // snprintf) read s, so s prints as the template. A Rust caller passes a
-    // copy of Msg, so the alias is recognised by content (a non-empty s
-    // equal to Msg) and s is then re-read from Msg after each overwrite.
-    let sIsMsg = !cio::cstr(s).is_empty() && cio::cstr(s) == cio::cstr(&prj.Msg);
+    // C: lid.c passes the global Msg itself as s, and error_getMsg(code, Msg)
+    // overwrites Msg with the message template before fprintf reads s, so
+    // what C prints for %s there is the template. lid.rs reproduces that by
+    // passing the template as s; here s is printed as given.
     if prj.Frpt.file.is_some() {
         WRITE(prj, b"");
         let fmt = getMsgIntoMsg(prj, code);
-        let sv: Vec<u8> = if sIsMsg { cio::to_vec(&prj.Msg) } else { s.to_vec() };
-        cprintf!(prj.Frpt, &fmt, sv);
+        cprintf!(prj.Frpt, &fmt, s);
     }
     prj.ErrorCode = code;
 
     // --- save message to ErrorMsg if it's not for a line of input data
     if prj.ErrorCode <= ERR_INPUT || prj.ErrorCode >= ERR_FILE_NAME {
         let fmt = getMsgIntoMsg(prj, prj.ErrorCode);
-        let sv: Vec<u8> = if sIsMsg { cio::to_vec(&prj.Msg) } else { s.to_vec() };
         // snprintf(ErrorMsg, MAXMSG, ...): at most MAXMSG-1 bytes + NUL
-        let out = cformat!(&fmt, sv);
+        let out = cformat!(&fmt, s);
         let n = out.len().min((MAXMSG - 1) as usize);
         prj.ErrorMsg[..n].copy_from_slice(&out[..n]);
         prj.ErrorMsg[n] = 0;
