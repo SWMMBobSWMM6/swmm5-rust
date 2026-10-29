@@ -1,0 +1,9 @@
+221 models, 0 done, 221 to run
+100/221
+DIFF OpenSWMM_Code_Review_2026/4-io/IO-23-unit-hydrograph-without-gage/IO-23_no-gages.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-02-xsection-before-link-heap-overflow/CRASH-02_xsect-before-weir.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-03-curve-without-points/CRASH-03_empty-curve.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-04-curve-id-only-line-count-pass/CRASH-04_quoted-shape.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-08-rule-expression-freed-after-input-error/CRASH-08_expr-bad-option.inp None
+DIFF OpenSWMM_Code_Review_2026/5-crashes/CRASH-08-rule-expression-freed-after-input-error/CRASH-08_expr-duplicate-id.inp None
+200/221

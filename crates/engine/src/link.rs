@@ -744,7 +744,7 @@ pub fn link_getResults(prj: &mut Project, j: i32, wt: f64, x: &mut [f32])
     c = 0.0;
     if prj.Link[ju].type_ == CONDUIT {
         if prj.Link[ju].xsect.type_ != DUMMY {
-            c = xsect_getAofY(prj, &prj.Link[ju].xsect, y) / prj.Link[ju].xsect.aFull;
+            c = linkXsect_getAofY(prj, j, y) / prj.Link[ju].xsect.aFull;
         }
     } else {
         c = prj.Link[ju].setting;
@@ -823,7 +823,7 @@ pub fn link_setOutfallDepth(prj: &mut Project, j: i32)
 //=============================================================================
 
 /// Called by: dwflow.
-pub fn link_getYcrit(prj: &Project, j: i32, q: f64) -> f64
+pub fn link_getYcrit(prj: &mut Project, j: i32, q: f64) -> f64
 //
 //  Input:   j = link index
 //           q = link flow rate (cfs)
@@ -831,13 +831,13 @@ pub fn link_getYcrit(prj: &Project, j: i32, q: f64) -> f64
 //  Purpose: computes critical depth for given flow rate.
 //
 {
-    xsect_getYcrit(prj, &prj.Link[j as usize].xsect, q)
+    linkXsect_getYcrit(prj, j, q)
 }
 
 //=============================================================================
 
 /// Called by: dwflow.
-pub fn link_getYnorm(prj: &Project, j: i32, mut q: f64) -> f64
+pub fn link_getYnorm(prj: &mut Project, j: i32, mut q: f64) -> f64
 //
 //  Input:   j = link index
 //           q = link flow rate (cfs)
@@ -866,8 +866,8 @@ pub fn link_getYnorm(prj: &Project, j: i32, mut q: f64) -> f64
         return 0.0;
     }
     s = q / prj.Conduit[k as usize].beta;
-    a = xsect_getAofS(prj, &prj.Link[ju].xsect, s);
-    y = xsect_getYofA(prj, &prj.Link[ju].xsect, a);
+    a = linkXsect_getAofS(prj, j, s);
+    y = linkXsect_getYofA(prj, j, a);
     y
 }
 
@@ -890,7 +890,7 @@ pub fn link_getLength(prj: &Project, j: i32) -> f64
 //=============================================================================
 
 /// Called by: controls, stats, swmm5.
-pub fn link_getVelocity(prj: &Project, j: i32, mut flow: f64, depth: f64) -> f64
+pub fn link_getVelocity(prj: &mut Project, j: i32, mut flow: f64, depth: f64) -> f64
 //
 //  Input:   j     = link index
 //           flow  = link flow rate (cfs)
@@ -910,7 +910,7 @@ pub fn link_getVelocity(prj: &Project, j: i32, mut flow: f64, depth: f64) -> f64
     if prj.Link[ju].type_ == CONDUIT {
         k = prj.Link[ju].subIndex;
         flow /= prj.Conduit[k as usize].barrels as f64;
-        area = xsect_getAofY(prj, &prj.Link[ju].xsect, depth);
+        area = linkXsect_getAofY(prj, j, depth);
         if area > FUDGE {
             veloc = flow / area;
         }
@@ -921,7 +921,7 @@ pub fn link_getVelocity(prj: &Project, j: i32, mut flow: f64, depth: f64) -> f64
 //=============================================================================
 
 /// Called by: dwflow.
-pub fn link_getFroude(prj: &Project, j: i32, v: f64, mut y: f64) -> f64
+pub fn link_getFroude(prj: &mut Project, j: i32, v: f64, mut y: f64) -> f64
 //
 //  Input:   j = link index
 //           v = flow velocity (fps)
@@ -930,7 +930,7 @@ pub fn link_getFroude(prj: &Project, j: i32, v: f64, mut y: f64) -> f64
 //  Purpose: computes Froude Number for given velocity and flow depth
 //
 {
-    let xsect: &TXsect = &prj.Link[j as usize].xsect;
+    let ju = j as usize;
 
     // --- return 0 if link is not a conduit
     if prj.Link[j as usize].type_ != CONDUIT {
@@ -941,12 +941,15 @@ pub fn link_getFroude(prj: &Project, j: i32, v: f64, mut y: f64) -> f64
     if y <= FUDGE {
         return 0.0;
     }
-    if xsect_isOpen(xsect.type_) == 0 && xsect.yFull - y <= FUDGE {
+    if xsect_isOpen(prj.Link[ju].xsect.type_) == 0 && prj.Link[ju].xsect.yFull - y <= FUDGE {
         return 0.0;
     }
 
     // --- compute hydraulic depth
-    y = xsect_getAofY(prj, xsect, y) / xsect_getWofY(prj, xsect, y);
+    //     (GCC evaluates the area first; for FILLED_CIRCULAR it can edit the
+    //      link's yFull, which the width then reads)
+    let aHyd = linkXsect_getAofY(prj, j, y);
+    y = aHyd / xsect_getWofY(prj, &prj.Link[ju].xsect, y);
 
     // --- compute Froude No.
     v.abs() / (GRAVITY * y).sqrt()
@@ -3043,4 +3046,32 @@ fn outlet_getFlow(prj: &mut Project, k: i32, head: f64) -> f64
     else {
         return prj.Outlet[ku].qCoeff * h.powf(prj.Outlet[ku].qExpon) / UCF(prj, FLOW);
     }
+}
+
+//=============================================================================
+
+/// link_getVelocity for a caller that holds the model shared (controls.c's
+/// rule variables). C calls the same function, whose area lookup can make
+/// FILLED_CIRCULAR's one-bit round-trip edit to Link[j].xsect. That edit
+/// changes a section at most once, and by the time a rule reads a velocity
+/// (depth > 0.01 ft) the routing step before it has already looked up that
+/// conduit's area at a nonzero depth, so here it would change nothing.
+pub fn link_getVelocityShared(prj: &Project, j: i32, mut flow: f64, depth: f64) -> f64 {
+    let ju = j as usize;
+    let area: f64;
+    let mut veloc: f64 = 0.0;
+    let k: i32;
+
+    if depth <= 0.01 {
+        return 0.0;
+    }
+    if prj.Link[ju].type_ == CONDUIT {
+        k = prj.Link[ju].subIndex;
+        flow /= prj.Conduit[k as usize].barrels as f64;
+        area = xsect_getAofY(prj, &prj.Link[ju].xsect, depth);
+        if area > FUDGE {
+            veloc = flow / area;
+        }
+    }
+    veloc
 }

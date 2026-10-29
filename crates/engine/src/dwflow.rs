@@ -89,9 +89,10 @@ pub fn dwflow_findConduitFlow(prj: &mut Project, j: i32, steps: i32, omega: f64,
     let mut q: f64;                    // new flow value (cfs)
     let barrels: f64;                  // number of barrels in conduit
     let ju = j as usize;
-    // C: TXsect* xsect = &Link[j].xsect; nothing below changes Link[j].xsect,
-    // so a copy reads the same values.
-    let xsect: TXsect = prj.Link[ju].xsect; // ptr. to conduit's cross section data
+    // C: TXsect* xsect = &Link[j].xsect. The getters can edit a FILLED_CIRCULAR
+    // section in place, so the copy goes back to the link right after them and
+    // later reads use the link.
+    let mut xsect: TXsect = prj.Link[ju].xsect; // ptr. to conduit's cross section data
     let mut isFull: i8 = FALSE as i8;  // TRUE if conduit flowing full
     let mut isClosed: i8 = FALSE as i8; // TRUE if conduit closed
 
@@ -145,16 +146,17 @@ pub fn dwflow_findConduitFlow(prj: &mut Project, j: i32, steps: i32, omega: f64,
 
     // --- compute area at each end of conduit & hyd. radius at upstream end
     wSlot = getSlotWidth(prj, &xsect, y1);
-    a1 = getArea(prj, &xsect, y1, wSlot);
-    r1 = getHydRad(prj, &xsect, y1);
+    a1 = getArea(prj, &mut xsect, y1, wSlot);
+    r1 = getHydRad(prj, &mut xsect, y1);
     wSlot = getSlotWidth(prj, &xsect, y2);
-    a2 = getArea(prj, &xsect, y2, wSlot);
+    a2 = getArea(prj, &mut xsect, y2, wSlot);
 
     // --- compute area & hyd. radius at midpoint
     yMid = 0.5 * (y1 + y2);
     wSlot = getSlotWidth(prj, &xsect, yMid);
-    aMid = getArea(prj, &xsect, yMid, wSlot);
-    rMid = getHydRad(prj, &xsect, yMid);
+    aMid = getArea(prj, &mut xsect, yMid, wSlot);
+    rMid = getHydRad(prj, &mut xsect, yMid);
+    prj.Link[ju].xsect = xsect;
 
     // --- alternate approach not currently used, but might produce better
     //     Bernoulli energy balance for steady flows
@@ -162,7 +164,7 @@ pub fn dwflow_findConduitFlow(prj: &mut Project, j: i32, steps: i32, omega: f64,
     //rMid = (r1+getHydRad(xsect,y2))/2.0;
 
     // --- check if conduit is flowing full
-    if y1 >= xsect.yFull && y2 >= xsect.yFull {
+    if y1 >= prj.Link[ju].xsect.yFull && y2 >= prj.Link[ju].xsect.yFull {
         isFull = TRUE as i8;
     }
 
@@ -312,10 +314,10 @@ pub fn dwflow_findConduitFlow(prj: &mut Project, j: i32, steps: i32, omega: f64,
     prj.Conduit[ku].a1 = aMid;
     prj.Conduit[ku].q1 = q;
     prj.Conduit[ku].q2 = q;
-    prj.Link[ju].newDepth = MIN(yMid, xsect.yFull);
+    prj.Link[ju].newDepth = MIN(yMid, prj.Link[ju].xsect.yFull);
     aMid = (a1 + a2) / 2.0;
 //  aMid = MIN(aMid, xsect->aFull);  //Slot can have aMid > aFull
-    prj.Conduit[ku].fullState = link_getFullState(a1, a2, xsect.aFull);
+    prj.Conduit[ku].fullState = link_getFullState(a1, a2, prj.Link[ju].xsect.aFull);
     prj.Link[ju].newVolume = aMid * link_getLength(prj, j) * barrels;
     prj.Link[ju].newFlow = q * barrels;
 }
@@ -661,7 +663,7 @@ fn getWidth(prj: &Project, xsect: &TXsect, y: f64) -> f64 {
 
 //=============================================================================
 
-fn getArea(prj: &Project, xsect: &TXsect, y: f64, wSlot: f64) -> f64 {
+fn getArea(prj: &Project, xsect: &mut TXsect, y: f64, wSlot: f64) -> f64 {
 //
 //  Input:   xsect = ptr. to conduit cross section
 //           y     = flow depth (ft)
@@ -671,12 +673,12 @@ fn getArea(prj: &Project, xsect: &TXsect, y: f64, wSlot: f64) -> f64 {
     if y >= xsect.yFull {
         return xsect.aFull + (y - xsect.yFull) * wSlot;
     }
-    xsect_getAofY(prj, xsect, y)
+    xsect_getAofY_mut(prj, xsect, y)
 }
 
 //=============================================================================
 
-fn getHydRad(prj: &Project, xsect: &TXsect, y: f64) -> f64 {
+fn getHydRad(prj: &Project, xsect: &mut TXsect, y: f64) -> f64 {
 //
 //  Input:   xsect = ptr. to conduit cross section
 //           y     = flow depth (ft)
@@ -686,7 +688,7 @@ fn getHydRad(prj: &Project, xsect: &TXsect, y: f64) -> f64 {
     if y >= xsect.yFull {
         return xsect.rFull;
     }
-    xsect_getRofY(prj, xsect, y)
+    xsect_getRofY_mut(prj, xsect, y)
 }
 
 //=============================================================================

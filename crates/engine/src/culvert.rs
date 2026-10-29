@@ -128,8 +128,8 @@ struct TCulvert {
     mm: f64, // Coeffs. for unsubmerged flow
     ad: f64,
     hPlus: f64,    // Intermediate terms
-    xsect: TXsect, // Culvert cross section (C: pointer to Link[j].xsect,
-                   // which nothing here modifies, so a copy)
+    xsect: TXsect, // Culvert cross section (C: pointer to Link[j].xsect;
+                   // edits made through it go back to the link at the end)
 }
 
 /// The file-scope variables of culvert.c (it has none).
@@ -210,6 +210,10 @@ pub fn culvert_getInflow(prj: &mut Project, j: i32, q0: f64, h: f64) -> f64
 
     // (condition is read only by the commented-out debug report below)
     let _ = condition;
+
+    // C worked on Link[j].xsect through a pointer: keep any FILLED_CIRCULAR
+    // round-trip edit the getters made
+    prj.Link[ju].xsect = culvert.xsect;
 
     // --- check if inlet controls and replace conduit's value of dq/dh
     if q < q0 {
@@ -358,7 +362,7 @@ fn form1Eqn(prj: &Project, yc: f64, p: &mut TCulvert) -> f64
     let yh: f64;
     let culvert: &mut TCulvert = p;
 
-    ac = xsect_getAofY(prj, &culvert.xsect, yc);
+    ac = xsect_getAofY_mut(prj, &mut culvert.xsect, yc);
     wc = xsect_getWofY(prj, &culvert.xsect, yc);
     yh = ac / wc;
 

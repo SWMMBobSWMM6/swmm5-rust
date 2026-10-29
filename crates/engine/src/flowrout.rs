@@ -489,7 +489,8 @@ fn initLinks(prj: &mut Project, routingModel: i32) {
             prj.Conduit[ku].q2 = prj.Conduit[ku].q1;
 
             // --- find areas based on initial flow depth
-            prj.Conduit[ku].a1 = xsect_getAofY(prj, &prj.Link[iu].xsect, prj.Link[iu].newDepth);
+            let y0 = prj.Link[iu].newDepth;
+            prj.Conduit[ku].a1 = linkXsect_getAofY(prj, iu as i32, y0);
             prj.Conduit[ku].a2 = prj.Conduit[ku].a1;
 
             // --- compute initial volume from area
@@ -708,8 +709,9 @@ fn setNewLinkState(prj: &mut Project, j: i32) {
         let ku = k as usize;
         a = 0.5 * (prj.Conduit[ku].a1 + prj.Conduit[ku].a2);
         prj.Link[ju].newVolume = a * link_getLength(prj, j) * prj.Conduit[ku].barrels as f64;
-        y1 = xsect_getYofA(prj, &prj.Link[ju].xsect, prj.Conduit[ku].a1);
-        y2 = xsect_getYofA(prj, &prj.Link[ju].xsect, prj.Conduit[ku].a2);
+        let (a1, a2) = (prj.Conduit[ku].a1, prj.Conduit[ku].a2);
+        y1 = linkXsect_getYofA(prj, j, a1);
+        y2 = linkXsect_getYofA(prj, j, a2);
         prj.Link[ju].newDepth = 0.5 * (y1 + y2);
 
         // --- update depths at end nodes
@@ -802,7 +804,7 @@ fn steadyflow_execute(prj: &mut Project, j: i32, qin: &mut f64, qout: &mut f64, 
             // --- infer flow area from flow rate
             else {
                 s = q / prj.Conduit[ku].beta;
-                prj.Conduit[ku].a1 = xsect_getAofS(prj, &prj.Link[ju].xsect, s);
+                prj.Conduit[ku].a1 = linkXsect_getAofS(prj, j, s);
             }
         }
         prj.Conduit[ku].a2 = prj.Conduit[ku].a1;

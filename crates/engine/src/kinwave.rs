@@ -39,8 +39,9 @@ pub struct KinwaveState {
     Afull: f64,
     Qfull: f64,
     /// C: `TXsect* pXsect` (pointer to the current link's cross-section);
-    /// here a copy of it, taken in kinwave_execute.
-    pXsect: TXsect,
+    /// here the index of that link, so lookups work on Link[j].xsect itself
+    /// (FILLED_CIRCULAR's round trip edits it, as in C).
+    pLink: i32,
 }
 
 //=============================================================================
@@ -91,7 +92,7 @@ pub fn kinwave_execute(prj: &mut Project, j: i32, qinflow: &mut f64, qoutflow: &
     }
 
     // --- assign module-level variables
-    prj.kinwave.pXsect = prj.Link[ju].xsect;
+    prj.kinwave.pLink = j;
     prj.kinwave.Qfull = prj.Link[ju].qFull;
     prj.kinwave.Afull = prj.Link[ju].xsect.aFull;
     k = prj.Link[ju].subIndex;
@@ -120,7 +121,8 @@ pub fn kinwave_execute(prj: &mut Project, j: i32, qinflow: &mut f64, qoutflow: &
     }
     // --- get normalized inlet area corresponding to inlet flow
     else {
-        ain = xsect_getAofS(prj, &prj.kinwave.pXsect, qin / prj.kinwave.Beta1) / Afull;
+        let s = qin / prj.kinwave.Beta1;
+        ain = linkXsect_getAofS(prj, j, s) / Afull;
     }
 
     // --- check for no flow
@@ -159,7 +161,7 @@ pub fn kinwave_execute(prj: &mut Project, j: i32, qinflow: &mut f64, qoutflow: &
         }
 
         // --- compute normalized outlet flow from outlet area
-        qout = prj.kinwave.Beta1 * xsect_getSofA(prj, &prj.kinwave.pXsect, aout * Afull);
+        qout = prj.kinwave.Beta1 * linkXsect_getSofA(prj, j, aout * Afull);
         if qin > 1.0 {
             qin = 1.0;
         }
@@ -179,7 +181,7 @@ pub fn kinwave_execute(prj: &mut Project, j: i32, qinflow: &mut f64, qoutflow: &
 
 //=============================================================================
 
-fn solveContinuity(prj: &Project, qin: f64, ain: f64, aout: &mut f64) -> i32 {
+fn solveContinuity(prj: &mut Project, qin: f64, ain: f64, aout: &mut f64) -> i32 {
 //
 //  Input:   qin = upstream normalized flow
 //           ain = upstream normalized area
@@ -204,18 +206,18 @@ fn solveContinuity(prj: &Project, qin: f64, ain: f64, aout: &mut f64) -> i32 {
     let mut fLo: f64;                  // lower/upper bounds on f
     let mut fHi: f64;
     let tol: f64 = EPSIL;              // absolute convergence tol.
-    let st = &prj.kinwave;
+    let (Beta1, C1, C2, Afull, pl) = (prj.kinwave.Beta1, prj.kinwave.C1, prj.kinwave.C2, prj.kinwave.Afull, prj.kinwave.pLink as usize);
 
     // --- first determine bounds on 'a' so that f(a) passes through 0.
 
     // --- set upper bound to area at full flow
     aHi = 1.0;
-    fHi = 1.0 + st.C1 + st.C2;
+    fHi = 1.0 + C1 + C2;
 
     // --- try setting lower bound to area where section factor is maximum
-    aLo = xsect_getAmax(prj, &st.pXsect) / st.Afull;
+    aLo = xsect_getAmax(prj, &prj.Link[pl].xsect) / Afull;
     if aLo < aHi {
-        fLo = (st.Beta1 * st.pXsect.sMax) + (st.C1 * aLo) + st.C2;
+        fLo = (Beta1 * prj.Link[pl].xsect.sMax) + (C1 * aLo) + C2;
     } else {
         fLo = fHi;
     }
@@ -225,7 +227,7 @@ fn solveContinuity(prj: &Project, qin: f64, ain: f64, aout: &mut f64) -> i32 {
         aHi = aLo;
         fHi = fLo;
         aLo = 0.0;
-        fLo = st.C2;
+        fLo = C2;
     }
 
     // --- proceed with search for root if fLo and fHi have different signs
@@ -276,7 +278,7 @@ fn solveContinuity(prj: &Project, qin: f64, ain: f64, aout: &mut f64) -> i32 {
 
 //=============================================================================
 
-fn evalContinuity(prj: &Project, a: f64, f: &mut f64, df: &mut f64) {
+fn evalContinuity(prj: &mut Project, a: f64, f: &mut f64, df: &mut f64) {
 //
 //  Input:   a = outlet normalized area
 //  Output:  f = value of continuity eqn.
@@ -284,9 +286,9 @@ fn evalContinuity(prj: &Project, a: f64, f: &mut f64, df: &mut f64) {
 //  Purpose: computes value of continuity equation (f) and its derivative (df)
 //           w.r.t. normalized area for link with normalized outlet area 'a'.
 //
-    let st = &prj.kinwave;
-    *f = (st.Beta1 * xsect_getSofA(prj, &st.pXsect, a * st.Afull)) + (st.C1 * a) + st.C2;
-    *df = (st.Beta1 * st.Afull * xsect_getdSdA(prj, &st.pXsect, a * st.Afull)) + st.C1;
+    let (Beta1, C1, C2, Afull, pl) = (prj.kinwave.Beta1, prj.kinwave.C1, prj.kinwave.C2, prj.kinwave.Afull, prj.kinwave.pLink);
+    *f = (Beta1 * linkXsect_getSofA(prj, pl, a * Afull)) + (C1 * a) + C2;
+    *df = (Beta1 * Afull * linkXsect_getdSdA(prj, pl, a * Afull)) + C1;
 }
 
 //=============================================================================

@@ -1593,7 +1593,7 @@ fn getVariableValue(prj: &Project, v: TVariable) -> f64
                 r_FULLFLOW => lk.qFull * UCF(prj, FLOW),
                 r_FULLDEPTH => lk.xsect.yFull * UCF(prj, LENGTH),
                 r_VELOCITY => {
-                    link_getVelocity(prj, j, lk.newFlow, lk.newDepth)
+                    link_getVelocityShared(prj, j, lk.newFlow, lk.newDepth)
                         * UCF(prj, LENGTH)
                 }
                 r_LENGTH => prj.Conduit[lk.subIndex as usize].length * UCF(prj, LENGTH),

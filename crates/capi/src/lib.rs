@@ -214,3 +214,54 @@ pub extern "C" fn swmm5rs_free(p: *mut u8) {
         std::alloc::dealloc(base, std::alloc::Layout::from_size_align(n + 8, 8).unwrap());
     }
 }
+
+// ---- object access, for coupling and inspection ----
+#[no_mangle]
+pub extern "C" fn swmm5rs_stride(h: c_int, stride: c_int, elapsed: *mut f64) -> c_int {
+    let mut t = 0.0;
+    let rc = with(h, |p| api::swmm_stride(p, stride, &mut t), -1);
+    if !elapsed.is_null() {
+        // SAFETY: caller passes a valid pointer to a double.
+        unsafe { *elapsed = t };
+    }
+    rc
+}
+#[no_mangle]
+pub extern "C" fn swmm5rs_getCount(h: c_int, obj: c_int) -> c_int {
+    with(h, |p| api::swmm_getCount(p, obj), -1)
+}
+#[no_mangle]
+pub extern "C" fn swmm5rs_getName(h: c_int, obj: c_int, index: c_int, buf: *mut c_char, size: c_int) {
+    let mut name = Vec::new();
+    with(h, |p| api::swmm_getName(p, obj, index, &mut name, size), ());
+    copy_out(buf, size - 1, &name);
+}
+#[no_mangle]
+pub extern "C" fn swmm5rs_getIndex(h: c_int, obj: c_int, name: *const c_char) -> c_int {
+    let n = bytes(name);
+    with(h, |p| api::swmm_getIndex(p, obj, n), -1)
+}
+#[no_mangle]
+pub extern "C" fn swmm5rs_getValue(h: c_int, property: c_int, index: c_int) -> f64 {
+    with(h, |p| api::swmm_getValue(p, property, index), 0.0)
+}
+#[no_mangle]
+pub extern "C" fn swmm5rs_setValue(h: c_int, property: c_int, index: c_int, value: f64) {
+    with(h, |p| api::swmm_setValue(p, property, index, value), ())
+}
+#[no_mangle]
+pub extern "C" fn swmm5rs_getSavedValue(h: c_int, property: c_int, index: c_int, period: c_int) -> f64 {
+    with(h, |p| api::swmm_getSavedValue(p, property, index, period), 0.0)
+}
+#[no_mangle]
+pub extern "C" fn swmm5rs_getVersion(_h: c_int) -> c_int {
+    swmm_getVersion()
+}
+#[no_mangle]
+pub extern "C" fn swmm_getCount(obj: c_int) -> c_int {
+    swmm5rs_getCount(dflt(), obj)
+}
+#[no_mangle]
+pub extern "C" fn swmm_getValue(property: c_int, index: c_int) -> f64 {
+    swmm5rs_getValue(dflt(), property, index)
+}

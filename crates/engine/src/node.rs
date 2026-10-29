@@ -1115,8 +1115,8 @@ fn storage_getOutflow(prj: &mut Project, j: i32, i: i32) -> f64
 
     // --- if partially full, return normal flow
     k = prj.Link[iu].subIndex;
-    a = xsect_getAofY(prj, &prj.Link[iu].xsect, y);
-    prj.Conduit[k as usize].beta * xsect_getSofA(prj, &prj.Link[iu].xsect, a)
+    a = linkXsect_getAofY(prj, i, y);
+    prj.Conduit[k as usize].beta * linkXsect_getSofA(prj, i, a)
 }
 
 //=============================================================================

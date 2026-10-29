@@ -3207,3 +3207,33 @@ const W_Arch: [f64; 26] = [
     0.9680,0.9515,0.9314,0.9101,0.8864,0.8592,0.8284,0.7917,0.7527,0.7065,
     0.6544,0.5953,0.5231,0.4355,0.3195,0.0
 ];
+
+//=============================================================================
+//  Getters on a link's own cross-section (not in C as functions)
+//=============================================================================
+//
+// C passes `&Link[j].xsect` to the getters above. For a FILLED_CIRCULAR
+// section the filled_circ_* helpers add the filled depth and area back into
+// yFull and aFull, compute, and take them out again; the round trip can leave
+// yFull or aFull one bit different, and C keeps the changed value in the link
+// for the rest of the run. These helpers make the same edit on
+// prj.Link[j].xsect, so the Rust engine carries the same drift. For every
+// other shape they are the plain getters.
+macro_rules! link_xsect_getter {
+    ($name:ident, $mutfn:ident) => {
+        pub fn $name(prj: &mut Project, j: i32, x: f64) -> f64 {
+            let mut xs = prj.Link[j as usize].xsect;
+            let r = $mutfn(prj, &mut xs, x);
+            prj.Link[j as usize].xsect = xs;
+            r
+        }
+    };
+}
+link_xsect_getter!(linkXsect_getSofA, xsect_getSofA_mut);
+link_xsect_getter!(linkXsect_getYofA, xsect_getYofA_mut);
+link_xsect_getter!(linkXsect_getAofY, xsect_getAofY_mut);
+link_xsect_getter!(linkXsect_getRofY, xsect_getRofY_mut);
+link_xsect_getter!(linkXsect_getRofA, xsect_getRofA_mut);
+link_xsect_getter!(linkXsect_getAofS, xsect_getAofS_mut);
+link_xsect_getter!(linkXsect_getdSdA, xsect_getdSdA_mut);
+link_xsect_getter!(linkXsect_getYcrit, xsect_getYcrit_mut);
