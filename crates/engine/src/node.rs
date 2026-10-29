@@ -1209,7 +1209,7 @@ fn divider_readParams(prj: &mut Project, j: i32, k: i32, tok: &[Vec<u8>], ntoks:
     let mut i: i32;
     let mut m: i32;
     let m1: i32;
-    let mut m2: i32;
+    let m2: i32;
     let mut n: i32;
     let mut x: [f64; 11] = [0.0; 11];
     let id: Option<Vec<u8>>;

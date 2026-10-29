@@ -637,7 +637,7 @@ pub fn table_getStorageVolume(table: &mut TTable, x: f64) -> f64 {
     //  Output:  returns a storage volume
     //  Purpose: finds volume for a given depth in a Storage Curve table.
     //
-    let mut a: f64;
+    let a: f64;
     let mut a1: f64;
     let mut x1: f64;
     let mut v: f64;
@@ -712,7 +712,7 @@ pub fn table_getStorageDepth(table: &mut TTable, v: f64) -> f64 {
     let mut da: f64 = 0.0;
     let mut v1: f64;
     let mut v2: f64;
-    let mut s: f64;
+    let s: f64;
     let entries = &table.entries;
 
     // --- see if target volume is below that of 1st table entry

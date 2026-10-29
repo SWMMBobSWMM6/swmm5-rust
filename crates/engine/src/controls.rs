@@ -1080,7 +1080,7 @@ fn addAction(prj: &mut Project, r: i32, tok: &[Vec<u8>], nToks: i32) -> i32
     let mut curve: i32 = -1;
     let mut tseries: i32 = -1;
     let mut n: i32;
-    let mut err: i32;
+    let err: i32;
     let mut values: [f64; 3] = [1.0, 0.0, 0.0];
 
     // --- check for proper number of tokens

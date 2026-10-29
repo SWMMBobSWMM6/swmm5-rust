@@ -135,7 +135,7 @@ pub fn report_readOptions(prj: &mut Project, tok: &[Vec<u8>], ntoks: i32) -> i32
 //
     let mut k: i8;
     let mut j: i32;
-    let mut m: i32;
+    let m: i32;
     let mut t: i32;
     if ntoks < 2 {
         return error_setInpError(prj, ERR_ITEMS, b"");

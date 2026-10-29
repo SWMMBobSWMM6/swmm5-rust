@@ -7,8 +7,9 @@
 #![forbid(unsafe_code)]
 #![allow(non_snake_case, non_upper_case_globals, non_camel_case_types)]
 #![allow(clippy::all)]
-// during translation only; removed once every module is in
-#![allow(unused_variables, unused_mut, dead_code, unused_imports, unreachable_code)]
+// C's own unused #defines, dead stores and unused locals are kept as written,
+// so their warnings are off:
+#![allow(dead_code, unused_assignments, unused_variables)]
 
 pub mod ccast;
 pub mod cio;

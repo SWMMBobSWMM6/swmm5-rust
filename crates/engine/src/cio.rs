@@ -452,7 +452,7 @@ pub fn format(fmt: &[u8], args: &[Arg]) -> Vec<u8> {
     let mut out = Vec::with_capacity(fmt.len() + 16);
     let mut ai = 0usize;
     let mut i = 0usize;
-    let mut next = |ai: &mut usize| -> Arg {
+    let next = |ai: &mut usize| -> Arg {
         let a = *args.get(*ai).unwrap_or_else(|| panic!("printf: missing argument {} for {:?}", *ai, String::from_utf8_lossy(fmt)));
         *ai += 1;
         a

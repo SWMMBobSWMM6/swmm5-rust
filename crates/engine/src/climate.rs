@@ -525,7 +525,7 @@ pub fn climate_readAdjustments(prj: &mut Project, tok: &[Vec<u8>], ntoks: i32) -
 //    INFIL         subcatchID  patternID
 {
     let mut i: i32;
-    let mut j: i32;
+    let j: i32;
 
     if ntoks == 1 {
         return 0;

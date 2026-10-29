@@ -1138,7 +1138,7 @@ fn findSubareaRunoff(prj: &Project, subarea: &mut TSubarea, tRunoff: f64) -> f64
     let Dstore = prj.subcatch.Dstore;
     let Alpha = prj.subcatch.Alpha;
     let xDepth = subarea.depth - Dstore;
-    let mut runoff: f64;
+    let runoff: f64;
 
     if xDepth > ZERO {
         // --- case where nonlinear routing is used

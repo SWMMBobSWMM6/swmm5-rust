@@ -649,7 +649,7 @@ fn setNodeDepth(prj: &mut Project, i: i32, dt: f64) {
     let mut isSurcharged: i32 = FALSE; // TRUE if node is surcharged
     let dQ: f64;                       // inflow minus outflow at node (cfs)
     let dV: f64;                       // change in node volume (ft3)
-    let mut dy: f64;                   // change in node depth (ft)
+    let dy: f64;                   // change in node depth (ft)
     let mut yMax: f64;                 // max. depth at node (ft)
     let yOld: f64;                     // node depth at previous time step (ft)
     let yLast: f64;                    // previous node depth (ft)
