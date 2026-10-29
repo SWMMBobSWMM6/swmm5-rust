@@ -182,7 +182,8 @@ pub extern "C" fn swmm_getMassBalErr(runoff: *mut f32, flow: *mut f32, qual: *mu
 }
 #[no_mangle]
 pub extern "C" fn swmm_getVersion() -> c_int {
-    api::swmm_getVersion()
+    let mut p = Project::new();
+    api::swmm_getVersion(&mut p)
 }
 
 // ---- memory for strings passed in from JavaScript ----

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/c2rust-baseline", "crates/engine", "crates/difftest", "crates/cli"]
+members = ["crates/c2rust-baseline", "crates/engine", "crates/difftest", "crates/cli", "crates/capi"]
 
 [workspace.package]
 version = "0.1.0"

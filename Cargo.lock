@@ -33,3 +33,10 @@ version = "0.1.0"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "swmm5-rust-capi"
+version = "0.1.0"
+dependencies = [
+ "swmm5-rust",
+]

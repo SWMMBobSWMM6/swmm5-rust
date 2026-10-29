@@ -1028,6 +1028,7 @@ fn setDefaults(prj: &mut Project)
     }
     prj.Evap.recoveryPattern = -1;
     prj.Evap.recoveryFactor = 1.0;
+    prj.infil.EvapRecoveryFactor = prj.Evap.recoveryFactor; // (not in C: keep infil's copy in step)
     prj.Evap.tSeries = -1;
     prj.Evap.dryOnly = FALSE;
 
