@@ -1,0 +1,92 @@
+{
+ "model": "tests/models/filled_circ_drift.inp",
+ "engine_commit": "cb78e85 (before d37bbc5)",
+ "prefix_bin_sha": "6cfbe252982350d8cfde2b9f56dcfbbcfa7952c64acf153a2dccecb5f8634406",
+ "values": 7848,
+ "differ": 13,
+ "max_abs": 3.814697265625e-06,
+ "diffs": [
+  {
+   "period": 5,
+   "slot": 52,
+   "epa": 0.009934816509485245,
+   "rust_prefix": 0.009934825822710991
+  },
+  {
+   "period": 5,
+   "slot": 89,
+   "epa": 0.009934816509485245,
+   "rust_prefix": 0.009934825822710991
+  },
+  {
+   "period": 5,
+   "slot": 90,
+   "epa": 0.01721736416220665,
+   "rust_prefix": 0.017217373475432396
+  },
+  {
+   "period": 5,
+   "slot": 91,
+   "epa": 0.3676132261753082,
+   "rust_prefix": 0.36761337518692017
+  },
+  {
+   "period": 5,
+   "slot": 92,
+   "epa": 5.4050374031066895,
+   "rust_prefix": 5.405040264129639
+  },
+  {
+   "period": 5,
+   "slot": 93,
+   "epa": 0.020340370014309883,
+   "rust_prefix": 0.02034038119018078
+  },
+  {
+   "period": 5,
+   "slot": 105,
+   "epa": 0.010089642368257046,
+   "rust_prefix": 0.010089651681482792
+  },
+  {
+   "period": 6,
+   "slot": 42,
+   "epa": 0.8087738156318665,
+   "rust_prefix": 0.8087738752365112
+  },
+  {
+   "period": 6,
+   "slot": 52,
+   "epa": 0.4574373662471771,
+   "rust_prefix": 0.4574373960494995
+  },
+  {
+   "period": 6,
+   "slot": 89,
+   "epa": 0.4574373662471771,
+   "rust_prefix": 0.4574373960494995
+  },
+  {
+   "period": 6,
+   "slot": 90,
+   "epa": 0.16770990192890167,
+   "rust_prefix": 0.16770991683006287
+  },
+  {
+   "period": 6,
+   "slot": 92,
+   "epa": 53.35851287841797,
+   "rust_prefix": 53.358516693115234
+  },
+  {
+   "period": 6,
+   "slot": 93,
+   "epa": 0.2007565051317215,
+   "rust_prefix": 0.2007565200328827
+  }
+ ],
+ "rpt_diff": [
+  "EPA:  J4 JUNCTION 0.50 0.79 98.79 0 01:04 0.79",
+  "pre-fix Rust: J4 JUNCTION 0.50 0.79 98.79 0 01:06 0.79"
+ ]
+}

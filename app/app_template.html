@@ -1,0 +1,1065 @@
+<meta charset="utf-8">
+<title>swmm5-rust</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="color-scheme" content="dark light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* A workbench, dark first: header lockup, tab bar, then a 1fr/2fr bench
+   (controls left, evidence right) that stacks below 900px. Three engines,
+   three inks: EPA amber, swmm5-cplus blue, swmm5-rust magenta. */
+:root{
+  color-scheme: dark;
+  --bg:#0b1220; --card:#131c2e; --field:#1a2438; --line:#2a3752; --line-soft:#212c42; --row-hover:#18233a;
+  --ink:#e6edf7; --ink-dim:#a3b1c6; --ink-faint:#8b9bb5; --ink-strong:#f8fafc; --head:#dbe7f7;
+  --headerbg:#0d1830; --onheader:#eaf2ff; --headersub:#b9cbe4; --btn-dark:rgba(255,255,255,.25); --tab-on:#f472b6;
+  --accent:#60a5fa; --accent-ink:#0b1220;
+  --epa:#fbbf24; --cpp:#60a5fa; --rs:#f472b6;
+  --panel:#152238; --panel-line:#2b3d5c; --panel-ink:#c3d7f3;
+  --hi-bg:#2a1c0f; --hi-line:#7c4a1d; --hi-ink:#fdba74;
+  --warn-bg:#2a1416; --warn-line:#7f2b32; --warn-ink:#fca5a5;
+  --ok-bg:#0f2318; --ok-line:#245c39; --ok-ink:#86efac;
+  --pill-bg:#1f2a44; --pill-ink:#c7d2fe;
+  --code-bg:#070d18; --code-ink:#dbe4f0;
+  --shadow:rgba(0,0,0,.45); --scrim:rgba(3,7,18,.6); --capbar:rgba(3,7,18,.8); --capink:#ffffff;
+  --f-ink:#e6edf7; --f-dim:#a3b1c6; --f-line:#2e3c58; --f-face:#0f1a2c; --f-soft:#16223a; --f-on:#0b1220;
+  --f-a:#60a5fa; --f-b:#fbbf24; --f-c:#4ade80; --f-d:#f87171; --f-e:#c084fc;
+  --font-display:"Archivo", "Arial Narrow", Arial, sans-serif;
+  --font-ui:"IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-read:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono:"IBM Plex Mono", Menlo, Consolas, monospace;
+  --r:12px; --gap:16px;
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --bg:#f5f7fa; --card:#ffffff; --field:#ffffff; --line:#dfe5ee; --line-soft:#eef2f7; --row-hover:#f3f6fb;
+  --ink:#1b2733; --ink-dim:#4f5d6e; --ink-faint:#6b7280; --ink-strong:#0b1220; --head:#1e3a5f;
+  --headerbg:#1e3a5f; --onheader:#ffffff; --headersub:#c7d7ea; --btn-dark:rgba(255,255,255,.35); --tab-on:#f9a8d4;
+  --accent:#1f6fd1; --accent-ink:#ffffff;
+  --epa:#a15c00; --cpp:#1f6fd1; --rs:#b8326f;
+  --panel:#eff6ff; --panel-line:#dbeafe; --panel-ink:#1e3a5f;
+  --hi-bg:#fff7ed; --hi-line:#fed7aa; --hi-ink:#9a3412;
+  --warn-bg:#fef2f2; --warn-line:#fecaca; --warn-ink:#991b1b;
+  --ok-bg:#f0fdf4; --ok-line:#bbf7d0; --ok-ink:#166534;
+  --pill-bg:#eef2ff; --pill-ink:#3730a3;
+  --code-bg:#0f172a; --code-ink:#e2e8f0;
+  --shadow:rgba(15,23,42,.06); --scrim:rgba(15,23,42,.45); --capbar:rgba(15,23,42,.8); --capink:#ffffff;
+  --f-ink:#1b2733; --f-dim:#5a6878; --f-line:#cfd8e3; --f-face:#ffffff; --f-soft:#eef3f8; --f-on:#ffffff;
+  --f-a:#1f6fd1; --f-b:#a15c00; --f-c:#1d7a45; --f-d:#c2352b; --f-e:#6b4fbb;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:13px/1.5 var(--font-ui);margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--headerbg)}
+a{color:var(--accent)}
+code,kbd{font-family:var(--font-mono);font-size:.92em}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+header.top{background:var(--headerbg);color:var(--onheader);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+header.top .wrap{display:flex;align-items:center;gap:var(--gap);padding-block:12px;flex-wrap:wrap}
+.lockup{display:flex;align-items:center;gap:12px;min-width:0}
+.lockup svg{flex:none}
+.lockup h1{font:700 26px/1 var(--font-display);font-stretch:85%;margin:0;letter-spacing:.2px;color:var(--onheader)}
+.lockup .sub{font-size:11px;color:var(--headersub);letter-spacing:.4px}
+.pill{font:500 11px/1 var(--font-mono);border:1px solid var(--headersub);color:var(--headersub);border-radius:999px;padding:4px 8px}
+.cluster{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+header .seg{border-color:var(--btn-dark)}
+.seg button{background:transparent;border:0;color:inherit;padding:6px 10px;font-size:12px}
+header .seg button{color:var(--headersub)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.hbtn{background:transparent;border:1px solid var(--btn-dark);color:var(--onheader);border-radius:8px;padding:6px 10px;font-size:12px}
+.hbtn:hover{border-color:var(--onheader)}
+nav.tabs{background:var(--headerbg);border-top:1px solid var(--btn-dark)}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs button{background:none;border:0;color:var(--headersub);padding:10px 14px;font-size:13px;border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--onheader);border-bottom-color:var(--tab-on);font-weight:600}
+
+main{padding-block:20px 8px}
+.bench{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:var(--gap);align-items:start}
+@media (max-width:900px){.bench{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px;min-width:0;box-shadow:0 1px 2px var(--shadow)}
+.card h2{font:650 15px/1.3 var(--font-display);font-stretch:92%;margin:0 0 10px;color:var(--head);text-wrap:balance}
+.card h3{font:600 13px/1.3 var(--font-ui);margin:14px 0 6px;color:var(--head)}
+.kicker{font:600 11px/1 var(--font-ui);letter-spacing:.9px;text-transform:uppercase;color:var(--ink-faint);margin:0 0 6px}
+.box{border-radius:10px;padding:12px 14px;border:1px solid;min-width:0}
+.box.panel{background:var(--panel);border-color:var(--panel-line);color:var(--panel-ink)}
+.box.hi{background:var(--hi-bg);border-color:var(--hi-line);color:var(--hi-ink)}
+.box.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+.box.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+.box b{color:inherit}
+label.f{display:block;font-size:11px;color:var(--ink-dim);margin:10px 0 4px;letter-spacing:.3px}
+select,input[type=file]{width:100%;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:9px 14px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--ink-dim)} .faint{color:var(--ink-faint);font-size:11px}
+.engines{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.engines{grid-template-columns:minmax(0,1fr)}}
+.eng{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--field);min-width:0}
+.eng .name{display:flex;align-items:center;gap:8px;font-weight:600;margin-bottom:6px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+dl.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;margin:0;font-size:12px}
+dl.kv dt{color:var(--ink-dim)} dl.kv dd{margin:0;font-family:var(--font-mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.big{font:700 22px/1.1 var(--font-display);font-stretch:88%}
+.chartbox{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--f-face);overflow:hidden}
+.chartbox svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);margin-top:8px}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
+.tile .n{font:700 26px/1 var(--font-display);font-stretch:85%;color:var(--ink-strong);font-variant-numeric:tabular-nums}
+.tile .l{font-size:12px;color:var(--ink-dim);margin-top:6px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table.t{border-collapse:collapse;width:100%;font-size:12px}
+table.t th,table.t td{padding:7px 10px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:top}
+table.t th{color:var(--ink-dim);font-weight:600;background:var(--field);position:sticky;top:0}
+table.t td.num,table.t th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+table.t tr:last-child td{border-bottom:0}
+table.t tbody tr:hover td{background:var(--row-hover)}
+.prog{height:8px;background:var(--line-soft);border-radius:4px;overflow:hidden;min-width:80px}
+.prog > span{display:block;height:100%;background:var(--rs);width:0}
+.tag{display:inline-block;font:600 11px/1 var(--font-ui);padding:3px 7px;border-radius:999px;border:1px solid;white-space:nowrap}
+.tag.ok{color:var(--ok-ink);background:var(--ok-bg);border-color:var(--ok-line)}
+.tag.warn{color:var(--warn-ink);background:var(--warn-bg);border-color:var(--warn-line)}
+.tag.hi{color:var(--hi-ink);background:var(--hi-bg);border-color:var(--hi-line)}
+.tag.panel{color:var(--panel-ink);background:var(--panel);border-color:var(--panel-line)}
+h3.sub{font:600 12px/1.3 var(--font-ui);color:var(--ink-dim);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.06em}
+table.stats td.dif{color:var(--ok-ink)} table.stats td.dif.nz{color:var(--hi-ink)} table.stats td.lab{color:var(--ink-dim)}
+table.stats tr.grp td{background:var(--field);color:var(--ink-dim);font-weight:600}
+details.more{margin-top:12px;border-top:1px solid var(--line-soft);padding-top:10px}
+details.more summary{cursor:pointer;font-weight:600;color:var(--ink);margin-bottom:8px}
+.panes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.panes{grid-template-columns:minmax(0,1fr)}}
+.panes pre.code{max-height:460px;margin:0;font-size:11px} .panes .kicker{margin:0 0 4px}
+pre.code{background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:10px 12px;overflow:auto;font:12px/1.5 var(--font-mono);margin:8px 0}
+.fig{margin:14px 0;min-width:0}
+.fig .frame{border:1px solid var(--line);border-radius:10px;overflow-x:auto;background:var(--f-face)}
+.fig svg{display:block;min-width:600px;width:100%;height:auto}
+.figwrap{border:1px solid var(--line);border-radius:10px;overflow-x:auto;background:var(--f-face)}
+.figwrap svg{display:block;min-width:600px;width:100%;height:auto}
+.fig figcaption{font-size:12px;color:var(--ink-dim);margin-top:6px;max-width:80ch}
+.defect{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--field);min-width:0}
+.defect .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:600}
+.defect .id{font-family:var(--font-mono);color:var(--rs)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+@media (max-width:900px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.doc{display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:900px){.doc{grid-template-columns:minmax(0,1fr)}}
+.toc{position:sticky;top:120px;font-size:12px;border-left:2px solid var(--line);padding-left:12px}
+@media (max-width:900px){.toc{position:static}}
+.toc a{display:block;color:var(--ink-dim);text-decoration:none;padding:3px 0}
+.toc a:hover{color:var(--ink)}
+.essay{max-width:74ch;font:17px/1.65 var(--font-read);color:var(--ink);min-width:0}
+.essay h1{font:700 34px/1.1 var(--font-display);font-stretch:85%;margin:0 0 6px;text-wrap:balance;color:var(--head)}
+.essay .dek{font:400 17px/1.5 var(--font-ui);color:var(--ink-dim);margin:0 0 18px}
+.essay h2{font:650 22px/1.2 var(--font-display);font-stretch:90%;margin:34px 0 10px;color:var(--head);text-wrap:balance;scroll-margin-top:120px}
+.essay p{margin:0 0 14px}
+.essay code{font-size:.82em}
+.essay ul,.essay ol{padding-left:22px;margin:0 0 14px} .essay li{margin:0 0 8px}
+.essay .fig{font-family:var(--font-ui)}
+.essay pre.code{font-size:12.5px}
+
+footer.prov{margin-top:24px;border-top:1px solid var(--line);background:var(--card)}
+footer.prov .wrap{padding-block:12px 16px;display:flex;gap:6px 24px;flex-wrap:wrap;font-size:11px;color:var(--ink-dim)}
+footer.prov b{color:var(--ink)}
+
+.modal{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;z-index:50;padding:16px}
+.modal .sheet{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;max-width:580px;width:100%;padding:20px 22px;box-shadow:0 20px 50px var(--shadow)}
+.modal h2{font:700 22px/1.15 var(--font-display);font-stretch:88%;margin:0 0 8px;color:var(--head)}
+.modal ol{padding-left:20px;margin:8px 0 14px} .modal li{margin-bottom:6px}
+.tour{position:fixed;z-index:60;background:var(--card);color:var(--ink);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;max-width:320px;box-shadow:0 12px 30px var(--shadow)}
+.tour h4{margin:0 0 4px;font:600 14px/1.3 var(--font-ui)}
+.tour .row{margin-top:10px;justify-content:space-between}
+.spot{position:fixed;z-index:55;border:2px solid var(--accent);border-radius:10px;pointer-events:none;box-shadow:0 0 0 9999px var(--scrim);transition:all .2s}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink-strong);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:70;font-size:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="lockup">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="17" fill="none" stroke="var(--headersub)" stroke-width="2.2"/>
+        <path d="M5.5 25 A17 17 0 0 0 34.5 25 Z" fill="var(--tab-on)" opacity=".85"/>
+        <path d="M13 11v13M13 11h7a4 4 0 0 1 0 8h-7M19 19l7 7" stroke="var(--onheader)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>swmm5-rust</h1>
+        <div class="sub">EPA SWMM 5.2.4 in safe Rust &middot; three engines, one page, the same bytes</div>
+      </div>
+      <span class="pill">v1.0 &middot; 5.2.4</span>
+    </div>
+    <div class="cluster">
+      <div class="seg" id="theme-toggle" role="group" aria-label="Colour theme">
+        <button data-t="dark" class="on" type="button">Dark</button><button data-t="light" type="button">Light</button><button data-t="auto" type="button">Auto</button>
+      </div>
+      <button class="hbtn" id="helpBtn" type="button" aria-label="How to use">?</button>
+      <button class="hbtn" id="gifBtn" type="button">Make a GIF</button>
+      <button class="hbtn" id="exportBtn" type="button">Export CSV</button>
+    </div>
+  </div>
+  <nav class="tabs" aria-label="Sections">
+    <div class="wrap" role="tablist" id="tablist">
+      <button role="tab" data-view="run" aria-selected="true">Run</button>
+      <button role="tab" data-view="many" aria-selected="false">Many at once</button>
+      <button role="tab" data-view="inside" aria-selected="false">Inside</button>
+      <button role="tab" data-view="verify" aria-selected="false">Verify</button>
+      <button role="tab" data-view="about" aria-selected="false">About</button>
+      <button role="tab" data-view="doc" aria-selected="false">Doc</button>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap" id="app">
+
+<!-- ============================== RUN -->
+<section class="view" id="view-run">
+  <div class="bench">
+    <div class="stack">
+      <div class="card">
+        <p class="kicker">One model, three engines</p>
+        <h2>Run EPA 5.2.4, swmm5-cplus and swmm5-rust side by side</h2>
+        <p class="muted" style="margin:0">All three are compiled to WebAssembly and run here, in your browser, in a background worker.</p>
+        <label class="f" for="sampleSel">Sample model</label>
+        <select id="sampleSel"></select>
+        <label class="f" for="fileIn">Or open your own .inp (add any rainfall or data files it names)</label>
+        <input type="file" id="fileIn" multiple accept=".inp,.dat,.txt,.csv,.rff,.hsf,.ini">
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="runBtn" type="button">Run all three</button>
+          <span class="faint" id="runStatus">Loading engines&hellip;</span>
+        </div>
+      </div>
+      <div class="box panel">
+        <b>What gets compared.</b> The binary <code>.out</code> files byte for byte (SHA-256 shown), every value in them one by one, and the <code>.rpt</code> reports number by number after dropping the three lines that print the wall clock. EPA runs through its own <code>swmm_run()</code>; swmm5-cplus and swmm5-rust each through a handle of their own.
+      </div>
+      <div class="box hi" id="sampleNote" hidden></div>
+    </div>
+    <div class="stack">
+      <div class="card" id="verdictCard">
+        <p class="kicker" id="verdictKicker">Result</p>
+        <div class="big" id="verdictBig">Waiting for the first run</div>
+        <p class="muted" id="verdictLine" style="margin:6px 0 0"></p>
+        <div class="engines" style="margin-top:14px">
+          <div class="eng"><div class="name"><span class="dot" style="background:var(--epa)"></span>EPA SWMM 5.2.4 (C)</div><dl class="kv" id="engEpa"></dl></div>
+          <div class="eng"><div class="name"><span class="dot" style="background:var(--cpp)"></span>swmm5-cplus (C++)</div><dl class="kv" id="engCpp"></dl></div>
+          <div class="eng"><div class="name"><span class="dot" style="background:var(--rs)"></span>swmm5-rust (safe Rust)</div><dl class="kv" id="engRs"></dl></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0">Time series from the three .out files</h2>
+          <div class="row">
+            <select id="seriesKind" aria-label="Quantity" style="width:auto"><option value="link:0">Link flow</option><option value="link:1">Link depth</option><option value="link:2">Link velocity</option><option value="link:4">Link capacity used</option><option value="node:0">Node depth</option><option value="node:1">Node head</option><option value="node:2">Node volume</option><option value="node:4">Node total inflow</option><option value="node:5">Node flooding</option><option value="sub:4">Subcatchment runoff</option><option value="sys:11">System outflow</option></select>
+            <select id="seriesId" aria-label="Element" style="width:auto;max-width:180px"></select>
+          </div>
+        </div>
+        <div class="chartbox" style="margin-top:10px" id="runChart"></div>
+        <div class="legend"><span><i style="background:var(--epa)"></i>EPA 5.2.4</span><span><i style="background:var(--cpp)"></i>swmm5-cplus (dashed)</span><span><i style="background:var(--rs)"></i>swmm5-rust (dotted, on top)</span><span id="diffNote"></span></div>
+        <h3 class="sub">The graph, statistic by statistic</h3>
+        <div class="tablewrap"><table class="t stats" id="seriesStats"></table></div>
+        <p class="faint" id="seriesStatsNote" style="margin:6px 0 0"></p>
+        <div class="row" style="margin-top:12px">
+          <button class="btn ghost" id="saveSeries" type="button">Save series (.csv)</button>
+          <button class="btn ghost" id="saveStats" type="button">Save statistics (.csv)</button>
+          <button class="btn ghost" id="saveZip" type="button">Save all three .out and .rpt (.zip)</button>
+          <span class="faint" id="saveNote"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Every value in the three .out files</h2>
+        <p class="muted" id="outAllLine" style="margin:0 0 10px"></p>
+        <div class="tablewrap"><table class="t" id="outAll"></table></div>
+      </div>
+      <div class="card" id="rptCard">
+        <div class="row" style="justify-content:space-between"><h2 style="margin:0">The three .rpt files, number by number</h2><button class="btn ghost" id="saveRpt" type="button">Save report comparison (.csv)</button></div>
+        <p class="muted" id="rptLine" style="margin:8px 0 10px"></p>
+        <h3 class="sub">Headline results</h3>
+        <div class="tablewrap"><table class="t stats" id="rptHead"></table></div>
+        <details class="more" open><summary>Continuity and time-step tables</summary><div class="tablewrap"><table class="t stats" id="rptItems"></table></div></details>
+        <details class="more"><summary>Every summary table, column by column</summary><div class="tablewrap" style="max-height:520px"><table class="t stats" id="rptCols"></table></div></details>
+        <details class="more"><summary>Section by section</summary><div class="tablewrap"><table class="t stats" id="rptSecs"></table></div></details>
+        <details class="more"><summary>Read a section in all three reports</summary>
+          <select id="rptSecSel" aria-label="Report section" style="margin:8px 0"></select>
+          <div class="panes"><div><p class="kicker">EPA 5.2.4</p><pre class="code" id="rptPaneA"></pre></div><div><p class="kicker">swmm5-cplus</p><pre class="code" id="rptPaneC"></pre></div><div><p class="kicker">swmm5-rust</p><pre class="code" id="rptPaneB"></pre></div></div>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== MANY -->
+<section class="view" id="view-many" hidden>
+  <div class="bench">
+    <div class="stack">
+      <div class="card">
+        <p class="kicker">No globals</p>
+        <h2>Open every sample in one swmm5-rust instance</h2>
+        <p class="muted" style="margin:0 0 8px">Each model gets its own handle, a <code>Box&lt;Project&gt;</code> that owns everything the model needs. They are stepped in turn, one routing step each, inside a single WebAssembly instance. Then each result is checked against a solo EPA run of the same model.</p>
+        <div id="manyList"></div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="manyBtn" type="button">Run them together</button><span class="faint" id="manyStatus"></span></div>
+      </div>
+      <div class="box panel"><b>Why this works.</b> EPA SWMM 5.2.4 keeps its working state in process-wide variables, so a program holds one model at a time. In swmm5-rust there are no globals for a second model to overwrite: every value lives in a <code>Project</code>, and every function takes the one it works on as its first argument.</div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h2>Progress and results</h2>
+        <div class="tablewrap"><table class="t" id="manyTable"><thead><tr><th>Model</th><th>Progress</th><th class="num">Steps</th><th>.out SHA-256 (first 12)</th><th>vs solo EPA</th></tr></thead><tbody><tr><td colspan="5" class="muted">Press "Run them together".</td></tr></tbody></table></div>
+        <p class="faint" id="manyFoot" style="margin:8px 0 0"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== INSIDE -->
+<section class="view" id="view-inside" hidden>
+  <div class="stack">
+    <div class="tiles" id="insideTiles"></div>
+    <div class="card"><h2>The route from C to safe Rust</h2><div class="figwrap" id="figPipelineIn"></div></div>
+    <div class="card"><h2>Where the unchecked code is</h2><div class="figwrap" id="figUnsafeIn"></div></div>
+    <div class="card"><h2>How C's constructs became safe Rust</h2><div class="tablewrap"><table class="t" id="reprTable"></table></div></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">The same function in C, C++ and Rust</h2><select id="codeSel" aria-label="Function" style="width:auto;max-width:100%"></select></div>
+      <p class="muted" id="codeWhy" style="margin:10px 0"></p>
+      <div class="panes">
+        <div><p class="kicker" id="codeCap0">EPA 5.2.4 (C)</p><pre class="code" id="codeC"></pre></div>
+        <div><p class="kicker" id="codeCap1">swmm5-cplus (C++)</p><pre class="code" id="codeCpp"></pre></div>
+        <div><p class="kicker" id="codeCap2">swmm5-rust</p><pre class="code" id="codeRs"></pre></div>
+      </div>
+    </div>
+    <div class="card"><h2>The compiler's one objection</h2><div class="figwrap" id="figBorrowIn"></div></div>
+    <div class="card" id="storageCard">
+      <p class="kicker">RS-1, live</p>
+      <h2>Same network, two section orders, three engines</h2>
+      <p class="muted" style="margin:0 0 10px">Two storage units with identical inflows: S1 shaped like a funnel (FUNCTIONAL), S2 like a pyramid (PYRAMIDAL). Order A lists the outfall before the storage units; order B lists the storage units first. Nothing else differs.</p>
+      <div class="row"><button class="btn" id="storageBtn" type="button">Run both orders in all three engines</button><span class="faint" id="storageStatus"></span></div>
+      <div class="chartbox" style="margin-top:12px" id="storageChart"></div>
+      <div class="legend"><span><i style="background:var(--f-c)"></i>S2, order B (storage first)</span><span><i style="background:var(--f-d)"></i>S2, order A (outfall first)</span><span><i style="background:var(--f-dim)"></i>S1, both orders</span></div>
+      <div class="tablewrap" style="margin-top:12px"><table class="t" id="storageTable"><tbody><tr><td class="muted">Run the two orders to fill this table.</td></tr></tbody></table></div>
+    </div>
+    <div class="card" id="decksCard">
+      <p class="kicker">RS-5 to RS-9, live</p>
+      <h2>Six decks where EPA's C touches memory it does not own</h2>
+      <p class="muted" style="margin:0 0 10px">From the OpenSWMM 2026 code review. Here they run in WebAssembly, where address zero is ordinary memory; the figure below shows the native runs from the gate.</p>
+      <div class="row"><button class="btn" id="decksBtn" type="button">Run the six decks in all three engines</button><span class="faint" id="decksStatus"></span></div>
+      <div class="tablewrap" style="margin-top:12px"><table class="t" id="decksTable"><tbody><tr><td class="muted">Run the decks to fill this table.</td></tr></tbody></table></div>
+      <div class="figwrap" style="margin-top:12px" id="figDecksIn"></div>
+    </div>
+    <div class="card"><h2>Defect register</h2><p class="muted" style="margin:0 0 10px">What the translation found in EPA 5.2.4. Each entry shows the C as it is in the v5.2.4 source. RS-1 to RS-4 are reproduced on purpose; RS-5 to RS-9 are undefined in C, so there is nothing to reproduce.</p><div class="stack" id="defects"></div></div>
+  </div>
+</section>
+
+<!-- ============================== VERIFY -->
+<section class="view" id="view-verify" hidden>
+  <div class="stack">
+    <div class="box ok" id="parityBox"></div>
+    <div class="tiles" id="verifyTiles"></div>
+    <div class="card"><h2>Native gate: the smoke and coverage set, by folder</h2><div class="figwrap" id="figGateV"></div></div>
+    <div class="card" id="corpusCard" hidden><h2>Native gate: the corpus set, by folder</h2><div class="figwrap" id="figCorpusV"></div></div>
+    <div class="card"><h2>WebAssembly gate, with the platform control</h2><div class="figwrap" id="figWasmV"></div><p class="faint" id="wasmNote" style="margin:8px 0 0"></p></div>
+    <div class="card"><h2>The six memory-error decks in four builds</h2><div class="figwrap" id="figDecksV"></div></div>
+    <div class="card"><h2>Controls that ran</h2><div id="controls"></div></div>
+    <div class="card"><h2>C's text routines, checked against glibc</h2><div class="figwrap" id="figCioV"></div></div>
+    <div class="card" id="timingCard" hidden><h2>Run time, with the noise floor</h2><div class="figwrap" id="figTimingV"></div><div class="figwrap" style="margin-top:12px" id="figTimingW"></div></div>
+    <div class="box warn" id="limitsBox"></div>
+  </div>
+</section>
+
+<!-- ============================== ABOUT -->
+<section class="view" id="view-about" hidden>
+  <div class="grid2">
+    <div class="stack">
+      <div class="card">
+        <h2>About swmm5-rust</h2>
+        <p>swmm5-rust is EPA SWMM 5.2.4 translated into safe Rust. The engine crate forbids <code>unsafe</code> code, so the compiler checks every array index and every reference, and nothing it computes differs from EPA's engine: the binary output and the report match byte for byte wherever EPA's own behaviour is defined.</p>
+        <p>This page runs three engines compiled to WebAssembly: EPA SWMM 5.2.4 from the official v5.2.4 tag, swmm5-cplus (the same engine restructured in C++), and swmm5-rust.</p>
+        <p>The EPA Storm Water Management Model is a work of the U.S. Environmental Protection Agency, in the public domain. Version 5.2.4's engine is Lewis Rossman's design; both translations keep every algorithm as he wrote it.</p>
+        <h3>Build provenance</h3>
+        <div class="tablewrap"><table class="t" id="provTable"></table></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card" id="aiUse">
+        <h2>AI use</h2>
+        <p>swmm5-rust, this app and its Doc essay were built with Claude, Anthropic's AI model (Claude Opus 5.5), in one session on 28 and 29 October 2026, at the request of Robert (Bob) Dickinson, who chose the goal (safe Rust, byte-identical to EPA 5.2.4) and supplies the model corpus it was tested on. Responsibility for publishing the work is his.</p>
+        <p><b>What Claude did:</b> ran c2rust on EPA's source and wrote the passes that made its output build on stable Rust and convert floats as x86 does; wrote the safe engine's skeleton and the translation rule book; ran the translation of the 54 modules as ten batches of parallel agents and integrated them; wrote <code>ccast</code>, <code>cio</code> and their tests against glibc; found and fixed the FILLED_CIRCULAR drift; wrote the C interface, the WebAssembly build, the in-memory file system the engines run on here, the gates, the lockstep tool, this page, its figures and the essay.</p>
+        <p><b>How it was checked:</b> mechanically, not by the AI's judgment. Byte comparison of every <code>.out</code> and <code>.rpt</code> against EPA 5.2.4 built from the official tag, natively and in WebAssembly; a platform control; the glibc comparisons. <b>Not yet checked by a person:</b> the translation has not been reviewed line by line by Bob, and the gates have not been rerun on his machine.</p>
+      </div>
+      <div class="card">
+        <h2>Sources</h2>
+        <ul style="margin:0;padding-left:18px">
+          <li><a href="https://github.com/USEPA/Stormwater-Management-Model/tree/v5.2.4" target="_blank" rel="noopener">USEPA/Stormwater-Management-Model, tag v5.2.4</a> (the reference engine)</li>
+          <li><a href="https://github.com/SWMMBobSWMM6/swmm5-cplus" target="_blank" rel="noopener">SWMMBobSWMM6/swmm5-cplus</a> (the C++ engine on this page)</li>
+          <li><a href="https://github.com/SWMMBobSWMM6/1729-SWMM5-Models-2030" target="_blank" rel="noopener">SWMMBobSWMM6/1729-SWMM5-Models-2030</a> (the corpus the gates ran on, including the OpenSWMM 2026 code-review decks)</li>
+          <li><a href="https://github.com/immunant/c2rust" target="_blank" rel="noopener">c2rust</a> 0.22.1 (the mechanical translation used as a reference); Rust 1.91; GCC 13.3; Clang 18 with wasi-libc</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== DOC -->
+<section class="view" id="view-doc" hidden>
+  <div class="doc">
+    <nav class="toc" id="toc" aria-label="Contents"></nav>
+    <article class="essay" id="essay"></article>
+  </div>
+</section>
+</main>
+
+<footer class="prov">
+  <div class="wrap">
+    <span><b>Engines:</b> EPA SWMM 5.2.4 C, swmm5-cplus C++ and swmm5-rust <span id="provCommit"></span>, all wasm32-wasi</span>
+    <span><b>Parity:</b> byte-identical .out and .rpt (minus wall-clock lines) wherever EPA's behaviour is defined</span>
+    <span><b>What this does not show:</b> a faster or more accurate engine; EPA's answer where its C is undefined</span>
+    <span><b>AI use:</b> built with Claude; see About</span>
+  </div>
+</footer>
+
+<div class="modal" id="welcome" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="wTitle">
+    <h2 id="wTitle">Every byte accounted for</h2>
+    <p class="muted" style="margin:0 0 6px">swmm5-rust is EPA SWMM 5.2.4 rewritten in safe Rust, the part of the language that will not let a program touch memory it does not own. Every output matches EPA's byte for byte. This page runs it beside EPA's C and the C++ version so you can check.</p>
+    <ol>
+      <li><b>Run</b> a sample or your own .inp through all three engines and compare the bytes, the graphs and the reports.</li>
+      <li><b>Many at once</b> opens every sample in one Rust instance and checks each against EPA.</li>
+      <li><b>Inside</b> shows the same functions in C, C++ and Rust, the defects the translation found, and two live experiments.</li>
+      <li><b>Verify</b> and <b>Doc</b> show how it was tested and how it was built.</li>
+    </ol>
+    <div class="row" style="justify-content:flex-end"><button class="btn ghost" id="tourBtn" type="button">Take the tour</button><button class="btn" id="welcomeClose" type="button">Start</button></div>
+  </div>
+</div>
+
+<script type="application/octet-stream" id="wasm-rs">/*__WASM_RS__*/</script>
+<script type="application/octet-stream" id="wasm-cplus">/*__WASM_CPLUS__*/</script>
+<script type="application/octet-stream" id="wasm-epa">/*__WASM_EPA__*/</script>
+<script type="application/octet-stream" id="docx-b64">/*__DOCX__*/</script>
+<script type="text/plain" id="engine-core-src">/*__ENGINE_CORE__*/</script>
+<script>/*__CMP__*/</script>
+<script>window.APPDATA = /*__DATA__*/;</script>
+<script>
+'use strict';
+const D = window.APPDATA;
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const fmt = (n, d) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d === undefined ? 0 : d, minimumFractionDigits: d === undefined ? 0 : d });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+const ENG = [['epa', 'EPA 5.2.4', 'var(--epa)'], ['cpp', 'swmm5-cplus', 'var(--cpp)'], ['rs', 'swmm5-rust', 'var(--rs)']];
+
+/* ---------------------------------------------------------------- theme (dark first) */
+let THEME_PREF = 'dark';
+function prefersDark() { try { return matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { return true; } }
+function applyTheme(pref) {
+  THEME_PREF = (pref === 'light' || pref === 'auto') ? pref : 'dark';
+  const t = THEME_PREF === 'auto' ? (prefersDark() ? 'dark' : 'light') : THEME_PREF;
+  document.documentElement.setAttribute('data-theme', t);
+  $$('#theme-toggle button').forEach(b => b.classList.toggle('on', b.dataset.t === THEME_PREF));
+  try { localStorage.setItem('swmm5rust_theme', THEME_PREF); } catch (e) {}
+  redrawCharts();
+}
+document.documentElement.setAttribute('data-theme', 'dark');
+$$('#theme-toggle button').forEach(b => b.addEventListener('click', () => applyTheme(b.dataset.t)));
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (THEME_PREF === 'auto') applyTheme('auto'); }); } catch (e) {}
+
+/* ---------------------------------------------------------------- tabs */
+let CURRENT = 'run';
+function showView(v) {
+  $$('#tablist button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === v)));
+  $$('.view').forEach(s => { s.hidden = s.id !== 'view-' + v; });
+  CURRENT = v;
+  try { if (location.hash !== '#' + v) history.replaceState(null, '', '#' + v); } catch (e) {}
+}
+$$('#tablist button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if ($('#view-' + h)) showView(h); });
+
+/* ---------------------------------------------------------------- downloads capability */
+let DL = null;
+(async () => { try { if (window.claude && claude.use) DL = await claude.use('downloads'); } catch (e) { DL = null; } updateSaveUI(); })();
+function updateSaveUI() {
+  $('#saveNote').textContent = DL ? '' : 'Saving files needs the claude.ai viewer; here the save buttons are inactive.';
+  ['#saveSeries', '#saveZip', '#exportBtn', '#saveDocx', '#saveStats', '#saveRpt'].forEach(s => { const b = $(s); if (b) b.disabled = !DL; });
+}
+async function save(filename, data) {
+  if (!DL) { toast('Saving is available in the claude.ai viewer.'); return; }
+  try { await DL.save({ filename, data }); toast('Saved ' + filename); }
+  catch (e) { if (e && e.code !== 'declined') toast('Could not save: ' + (e.message || e.code)); }
+}
+
+/* ---------------------------------------------------------------- worker */
+function b64bytes(id) {
+  const s = $(id).textContent.trim(); const bin = atob(s); const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u;
+}
+const WORKER_SRC = $('#engine-core-src').textContent + `
+const mods = {};
+const H = (m, extra) => self.postMessage(Object.assign({ id: m.id }, extra));
+const SKIPPED = { skipped: true, rc: null, out: null, rpt: null, trap: '', panic: '' };
+const three = (C, name, files, skip) => { skip = skip || [];
+  return { epa: skip.includes('epa') ? SKIPPED : C.runLegacy(mods.epa, name, files), cpp: skip.includes('cpp') ? SKIPPED : C.runHandle(mods.cplus, name, files), rs: skip.includes('rs') ? SKIPPED : C.runHandle(mods.rs, name, files) }; };
+self.onmessage = async (e) => {
+  const m = e.data;
+  try {
+    if (m.type === 'init') {
+      mods.rs = await WebAssembly.compile(m.rs); mods.cplus = await WebAssembly.compile(m.cplus); mods.epa = await WebAssembly.compile(m.epa);
+      H(m, { type: 'ready' }); return;
+    }
+    const C = self.SwmmEngineCore;
+    if (m.type === 'run') {
+      H(m, Object.assign({ type: 'done' }, three(C, m.inp, m.files)));
+    } else if (m.type === 'batch') {
+      const out = m.models.map(md => Object.assign({ name: md.name }, three(C, md.file, { [md.file]: md.text }, md.skip)));
+      H(m, { type: 'done', out });
+    } else if (m.type === 'multi') {
+      const solo = m.models.map((md) => C.runLegacy(mods.epa, 'solo.inp', Object.assign({ 'solo.inp': md.inp }, md.extra || {})));
+      H(m, { type: 'solo', solo: solo.map(s => ({ rc: s.rc, out: s.out, rpt: s.rpt, ms: s.ms })) });
+      const r = C.runMulti(mods.rs, m.models, (i, steps, t, done) => H(m, { type: 'progress', i, steps, t, done }), 500);
+      H(m, { type: 'done', r });
+    }
+  } catch (err) { H(m, { type: 'error', message: String(err && err.message || err) }); }
+};`;
+let worker = null, msgId = 0; const pending = new Map();
+function startWorker() {
+  worker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' })));
+  worker.onmessage = (e) => { const p = pending.get(e.data.id); if (p) p(e.data); };
+  worker.onerror = (e) => { console.error(e); $('#runStatus').textContent = 'The engine worker failed to start.'; };
+}
+function call(msg, onMsg) {
+  return new Promise((resolve, reject) => {
+    const id = ++msgId;
+    pending.set(id, (d) => {
+      if (d.type === 'done' || d.type === 'ready') { pending.delete(id); resolve(d); }
+      else if (d.type === 'error') { pending.delete(id); reject(new Error(d.message)); }
+      else if (onMsg) onMsg(d);
+    });
+    worker.postMessage(Object.assign({ id }, msg));
+  });
+}
+let READY = null;
+function boot() {
+  startWorker();
+  const rs = b64bytes('#wasm-rs').buffer, cplus = b64bytes('#wasm-cplus').buffer, epa = b64bytes('#wasm-epa').buffer;
+  READY = call({ type: 'init', rs, cplus, epa });
+  READY.then(() => { $('#runStatus').textContent = 'Engines ready.'; runSelected(); })
+       .catch(e => { $('#runStatus').textContent = 'Engines failed to load: ' + e.message; });
+}
+
+/* ---------------------------------------------------------------- numbers and units */
+const parseOut = SWCMP.parseOut;
+const FLOW_UNITS = ['cfs', 'gpm', 'mgd', 'cms', 'lps', 'mld'];
+const isUS = p => p.flowUnits < 3;
+const FLOWISH = { link: [0], node: [3, 4, 5], sub: [4, 5], sys: [4, 5, 6, 7, 8, 9, 10, 11] };
+function unitOf(kind, v, p) {
+  const f = FLOW_UNITS[p.flowUnits] || 'flow', us = isUS(p), L = us ? 'ft' : 'm', r = us ? 'in/hr' : 'mm/hr', d = us ? 'in' : 'mm', e = us ? 'in/day' : 'mm/day';
+  const U = { link: [f, L, L + '/s', L + '³', 'fraction of full'], node: [L, L, L + '³', f, f, f],
+              sub: [r, d, e, r, f, f, L, 'fraction'], sys: [us ? '°F' : '°C', r, d, r, f, f, f, f, f, f, f, f, L + '³', e, e] };
+  return (U[kind] && U[kind][v]) || '';
+}
+function fs(v) { if (v === null || v === undefined || Number.isNaN(v)) return '—'; if (v === 0) return '0'; const a = Math.abs(v); return (a >= 1e6 || a < 1e-4) ? v.toExponential(3) : String(+v.toPrecision(6)); }
+function fsd(v) { return v === 0 ? '0' : (v > 0 ? '+' : '') + fs(v); }
+function hhmm(hours) { const m = Math.round(hours * 60), dd = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mi = m % 60; return (dd ? dd + ' d ' : '') + String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0'); }
+const dc = v => `<td class="num dif${v === 0 ? '' : ' nz'}">${v === null || v === undefined || Number.isNaN(v) ? '—' : fsd(v)}</td>`;
+
+// statistics of three series: EPA is the reference; sR = stats(EPA, Rust), sC = stats(EPA, C++)
+function statsHtml3(sR, sC, unit, volU) {
+  const row = (lab, a, c, r, d1, d2, u) => `<tr><td class="lab">${lab}</td><td class="num">${a}</td><td class="num">${c}</td><td class="num">${r}</td>${d1}${d2}<td class="lab">${u || ''}</td></tr>`;
+  let h = `<thead><tr><th>Statistic</th><th class="num">EPA 5.2.4</th><th class="num">swmm5-cplus</th><th class="num">swmm5-rust</th><th class="num">Rust − EPA</th><th class="num">C++ − EPA</th><th>Unit</th></tr></thead><tbody>`;
+  h += row('Peak', fs(sR.A.peak), fs(sC.B.peak), fs(sR.B.peak), dc(sR.peakDiff), dc(sC.peakDiff), unit);
+  h += row('Time of peak', hhmm(sR.A.peakT), hhmm(sC.B.peakT), hhmm(sR.B.peakT), dc(sR.peakDtMin), dc(sC.peakDtMin), 'hh:mm; differences in minutes');
+  h += row('Minimum', fs(sR.A.min), fs(sC.B.min), fs(sR.B.min), dc(sR.B.min - sR.A.min), dc(sC.B.min - sC.A.min), unit);
+  h += row('Mean', fs(sR.A.mean), fs(sC.B.mean), fs(sR.B.mean), dc(sR.B.mean - sR.A.mean), dc(sC.B.mean - sC.A.mean), unit);
+  if (sR.A.vol !== null) h += row('Volume (sum of values × step)', fs(sR.A.vol), fs(sC.B.vol), fs(sR.B.vol), dc(sR.B.vol - sR.A.vol), dc(sC.B.vol - sC.A.vol), volU);
+  h += `<tr class="grp"><td colspan="7">Agreement over ${fmt(sR.n)} reporting periods of ${fmt(sR.dtSec)} s, EPA as the reference</td></tr>`;
+  const ag = (lab, f, u) => `<tr><td class="lab">${lab}</td><td class="num" colspan="2"></td><td class="num">${f(sR)}</td><td class="num" colspan="2">${f(sC)}</td><td class="lab">${u || ''}</td></tr>`;
+  h += `<tr><td class="lab"></td><td colspan="2"></td><td class="num"><b>swmm5-rust</b></td><td class="num" colspan="2"><b>swmm5-cplus</b></td><td></td></tr>`;
+  h += ag('Values identical, bit for bit', s => `${fmt(s.same)} of ${fmt(s.n)}`, '');
+  h += ag('Largest |difference|', s => fs(s.maxAbs) + (s.maxAbs > 0 ? ' at ' + hhmm(s.maxAbsT) : ''), unit);
+  h += ag('Root-mean-square difference', s => fs(s.rmse), unit);
+  h += ag('Mean difference (bias)', s => fsd(s.bias), unit);
+  if (sR.volPct !== null) h += ag('Volume difference', s => fsd(+s.volPct.toFixed(4)) + '%', '');
+  h += ag('Nash–Sutcliffe efficiency', s => s.nse === null ? 'not defined' : (s.nse === 1 ? '1 (exact)' : s.nse.toFixed(6)), '1 is a perfect match');
+  h += ag('R² (squared correlation)', s => s.r2 === null ? 'not defined' : (s.r2 === 1 ? '1 (exact)' : s.r2.toFixed(6)), '');
+  return h + '</tbody>';
+}
+function statsCsv3(sR, sC, unit, volU) {
+  const q = x => `"${String(x).replace(/"/g, '""')}"`;
+  let c = `statistic,EPA 5.2.4,swmm5-cplus,swmm5-rust,rust minus epa,cplus minus epa,unit\n`;
+  c += `peak,${sR.A.peak},${sC.B.peak},${sR.B.peak},${sR.peakDiff},${sC.peakDiff},${q(unit)}\n`;
+  c += `peak time (h),${sR.A.peakT},${sC.B.peakT},${sR.B.peakT},${sR.peakDtMin / 60},${sC.peakDtMin / 60},h\n`;
+  c += `minimum,${sR.A.min},${sC.B.min},${sR.B.min},${sR.B.min - sR.A.min},${sC.B.min - sC.A.min},${q(unit)}\n`;
+  c += `mean,${sR.A.mean},${sC.B.mean},${sR.B.mean},${sR.B.mean - sR.A.mean},${sC.B.mean - sC.A.mean},${q(unit)}\n`;
+  if (sR.A.vol !== null) c += `volume,${sR.A.vol},${sC.B.vol},${sR.B.vol},${sR.B.vol - sR.A.vol},${sC.B.vol - sC.A.vol},${q(volU)}\n`;
+  c += `periods,${sR.n},,,,,\nvalues identical,,${sC.same},${sR.same},,,\nmax abs difference,,${sC.maxAbs},${sR.maxAbs},,,${q(unit)}\nRMSE,,${sC.rmse},${sR.rmse},,,${q(unit)}\nbias,,${sC.bias},${sR.bias},,,${q(unit)}\nNSE,,${sC.nse === null ? '' : sC.nse},${sR.nse === null ? '' : sR.nse},,,\nR2,,${sC.r2 === null ? '' : sC.r2},${sR.r2 === null ? '' : sR.r2},,,\n`;
+  return c;
+}
+
+/* ---------------------------------------------------------------- charts (SVG, theme tokens only) */
+function lineChart(el, opt) {
+  const W = 760, Hh = opt.h || 300, L = 62, R = 14, T = 16, B = Hh - 38;
+  let xs = opt.x, ymin = Infinity, ymax = -Infinity;
+  opt.series.forEach(s => s.y.forEach(v => { if (isFinite(v)) { ymin = Math.min(ymin, v); ymax = Math.max(ymax, v); } }));
+  if (!isFinite(ymin)) { ymin = 0; ymax = 1; }
+  if (ymin > 0) ymin = 0;
+  if (ymax === ymin) ymax = ymin + 1;
+  const span = ymax - ymin, mag = Math.pow(10, Math.floor(Math.log10(span))), stepY = [1, 2, 2.5, 5, 10].map(f => f * mag).find(s => span / s <= 6);
+  ymax = Math.ceil(ymax / stepY) * stepY; ymin = Math.floor(ymin / stepY) * stepY;
+  const x0 = xs[0], x1 = xs[xs.length - 1] || 1;
+  const X = v => L + (W - L - R) * (v - x0) / ((x1 - x0) || 1), Y = v => B - (B - T) * (v - ymin) / (ymax - ymin);
+  let s = `<svg viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif"><rect width="${W}" height="${Hh}" fill="var(--f-face)"/>`;
+  for (let v = ymin; v <= ymax + 1e-9; v += stepY) {
+    s += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}" stroke="var(--f-line)" stroke-width="0.8"/><text x="${L - 8}" y="${(Y(v) + 4).toFixed(1)}" font-size="10" fill="var(--f-dim)" text-anchor="end">${+v.toFixed(6)}</text>`;
+  }
+  const xspan = x1 - x0, xstep = [0.25, 0.5, 1, 2, 3, 6, 12, 24, 48, 96, 168, 336, 720].find(st => xspan / st <= 10) || 720;
+  for (let v = Math.ceil(x0 / xstep) * xstep; v <= x1 + 1e-9; v += xstep) {
+    s += `<line x1="${X(v).toFixed(1)}" y1="${B}" x2="${X(v).toFixed(1)}" y2="${B + 4}" stroke="var(--f-dim)"/><text x="${X(v).toFixed(1)}" y="${B + 16}" font-size="10" fill="var(--f-dim)" text-anchor="middle">${+v.toFixed(2)}</text>`;
+  }
+  s += `<text x="${(L + W - R) / 2}" y="${Hh - 6}" font-size="11" fill="var(--f-dim)" text-anchor="middle">${esc(opt.xlabel || 'hours')}</text>`;
+  s += `<text x="14" y="${(T + B) / 2}" font-size="11" fill="var(--f-dim)" text-anchor="middle" transform="rotate(-90 14 ${(T + B) / 2})">${esc(opt.ylabel || '')}</text>`;
+  const stride = Math.max(1, Math.floor(xs.length / 1500));
+  opt.series.forEach(se => {
+    let pts = '';
+    for (let i = 0; i < xs.length; i += stride) if (isFinite(se.y[i])) pts += X(xs[i]).toFixed(1) + ',' + Y(se.y[i]).toFixed(1) + ' ';
+    s += `<polyline points="${pts}" fill="none" stroke="${se.color}" stroke-width="${se.w || 2}" ${se.dash ? 'stroke-dasharray="' + se.dash + '"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`;
+  });
+  el.innerHTML = s + '</svg>';
+}
+
+/* ---------------------------------------------------------------- RUN tab */
+const SAMPLES = D.samples;
+SAMPLES.forEach((s, i) => { const o = document.createElement('option'); o.value = i; o.textContent = s.name + ' (' + s.units + ')'; $('#sampleSel').appendChild(o); });
+const NOTES = {
+  filled_circ_drift: 'Eight FILLED_CIRCULAR conduits whose sizes lose one bit in EPA\'s add-and-subtract round trip. A Rust translation that worked on copies of the cross-section differed here; this one writes the bit back as EPA does. See RS-3 on the Inside tab.',
+  storage_order_A: 'Order A: the outfall is listed before the storage units, so node 1 is the outfall and storage unit S2 is solved with S1\'s shape. Pick Node depth, S2 and S1: identical curves. Inside has both orders side by side (RS-1).',
+  storage_order_B: 'Order B: the storage units are listed first, so each storage index is its own node. S2 now follows its own pyramid shape. Compare with order A (RS-1).',
+  lid_error_message: 'An invalid rain-barrel drain. All three engines report ERROR 185 with the message template printed where the LID name belongs (RS-2). Open "Read a section" below to see the line.'
+};
+let USERFILES = null, LAST = null;
+$('#fileIn').addEventListener('change', async (e) => {
+  const fl = Array.from(e.target.files || []); if (!fl.length) { USERFILES = null; return; }
+  const inp = fl.find(f => /\.inp$/i.test(f.name));
+  if (!inp) { toast('Choose at least one .inp file.'); return; }
+  const files = {};
+  for (const f of fl) files[f.name] = new Uint8Array(await f.arrayBuffer());
+  USERFILES = { name: inp.name, files };
+  runSelected();
+});
+$('#sampleSel').addEventListener('change', () => { USERFILES = null; $('#fileIn').value = ''; runSelected(); });
+$('#runBtn').addEventListener('click', runSelected);
+async function sha256(bytes) {
+  if (!bytes || !bytes.length) return '(none)';
+  try { const h = await crypto.subtle.digest('SHA-256', bytes); return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+  catch (e) { return 'n/a'; }
+}
+const CLOCK = /Analysis begun on|Analysis ended on|Total elapsed time/;
+const dec = new TextDecoder('latin1');
+const normRpt = b => b ? dec.decode(b).split('\n').filter(l => !CLOCK.test(l)).join('\n') : '';
+async function runSelected() {
+  if (!READY) return;
+  await READY;
+  let name, files, label, key = null;
+  if (USERFILES) { name = USERFILES.name; files = USERFILES.files; label = name; }
+  else { const s = SAMPLES[+$('#sampleSel').value]; name = s.file; files = { [s.file]: s.text }; label = s.name; key = s.key; }
+  $('#sampleNote').hidden = !(key && NOTES[key]); if (key && NOTES[key]) $('#sampleNote').textContent = NOTES[key];
+  $('#runBtn').disabled = true; $('#runStatus').textContent = 'Running ' + label + '…';
+  try {
+    const d = await call({ type: 'run', inp: name, files });
+    const sha = {}; for (const [k] of ENG) sha[k] = await sha256(d[k].out);
+    const rpt = {}; for (const [k] of ENG) rpt[k] = normRpt(d[k].rpt);
+    const p = {}; for (const [k] of ENG) p[k] = parseOut(d[k].out);
+    LAST = { name: label, file: name, d, sha, rpt, p };
+    renderRun();
+    $('#runStatus').textContent = 'Done.';
+  } catch (e) { $('#runStatus').textContent = 'Run failed: ' + e.message; }
+  $('#runBtn').disabled = false;
+}
+function versionOf(rpt) { const m = rpt && dec.decode(rpt.subarray(0, 400)).match(/Build ([\d.]+)/); return m ? m[1] : '—'; }
+function renderRun() {
+  const L = LAST, d = L.d;
+  const outEq = k => L.sha[k] === L.sha.epa, rptEq = k => L.rpt[k] === L.rpt.epa;
+  const okR = outEq('rs') && rptEq('rs'), okC = outEq('cpp') && rptEq('cpp');
+  const hasOut = d.epa.out && d.epa.out.length;
+  $('#verdictKicker').textContent = L.name;
+  const big = okR && okC ? (hasOut ? 'All three byte-identical' : 'All three identical (no .out written)') : okR ? 'swmm5-rust identical; swmm5-cplus differs' : okC ? 'swmm5-cplus identical; swmm5-rust differs' : 'Outputs differ';
+  $('#verdictBig').textContent = big;
+  $('#verdictBig').style.color = okR && okC ? 'var(--ok-ink)' : 'var(--warn-ink)';
+  const trapped = ENG.filter(([k]) => d[k].trap).map(([k, n]) => n);
+  $('#verdictLine').innerHTML = (hasOut ? `.out: ${fmt(d.epa.out.length)} bytes, SHA-256 ${L.sha.epa.slice(0, 16)}&hellip;${okR && okC ? ' on all three' : ''}. ` : '') +
+    `.rpt: ${rptEq('rs') && rptEq('cpp') ? 'identical in all three' : 'different'} after removing the wall-clock lines.` +
+    ((typeof d.epa.rc === 'number' && d.epa.rc !== 0) ? ` EPA reported error ${esc(d.epa.rc)}; the error reports are compared like any other.` : '') +
+    (trapped.length ? ` Stopped by the WebAssembly machine: ${esc(trapped.join(', '))}.` : '');
+  const kv = (e, sha, k) => `<dt>engine build</dt><dd>${versionOf(e.rpt)}</dd><dt>return code</dt><dd>${esc(e.rc)}</dd>` + (e.trap ? `<dt>stopped</dt><dd>${esc(e.panic || e.trap)}</dd>` : '') +
+    `<dt>run time</dt><dd>${fmt(e.ms, 1)} ms</dd><dt>.out</dt><dd>${fmt((e.out || []).length)} bytes</dd><dt>SHA-256</dt><dd>${sha.slice(0, 16)}&hellip;</dd><dt>.rpt</dt><dd>${fmt(L.rpt[k].split('\n').length)} lines</dd>` +
+    (k !== 'epa' ? `<dt>vs EPA</dt><dd>${outEq(k) && rptEq(k) ? '<span class="tag ok">identical</span>' : '<span class="tag warn">differs</span>'}</dd>` : '');
+  $('#engEpa').innerHTML = kv(d.epa, L.sha.epa, 'epa'); $('#engCpp').innerHTML = kv(d.cpp, L.sha.cpp, 'cpp'); $('#engRs').innerHTML = kv(d.rs, L.sha.rs, 'rs');
+  if (fillSeriesIds()) drawRunChart(); renderOutAll(); renderRpt();
+}
+function fillSeriesIds() {
+  const p = LAST && LAST.p.epa; const sel = $('#seriesId'); sel.innerHTML = '';
+  const none = (msg) => { $('#runChart').innerHTML = `<p class="muted" style="padding:16px">${msg}</p>`; $('#seriesStats').innerHTML = ''; $('#seriesStatsNote').textContent = ''; $('#diffNote').textContent = ''; if (LAST) LAST.series = null; };
+  if (!p || !LAST.p.rs || !LAST.p.cpp) { none('No binary output to plot from all three engines. The .rpt comparison below still applies.'); return false; }
+  const [kind, v] = $('#seriesKind').value.split(':');
+  const list = kind === 'sys' ? ['system'] : p.ids[kind];
+  if (!list.length) { none('This model has no ' + (kind === 'sub' ? 'subcatchments' : kind + 's') + '.'); return false; }
+  let best = 0, bestv = -1;
+  list.forEach((id, i) => { const o = document.createElement('option'); o.value = i; o.textContent = id; sel.appendChild(o); });
+  if (list.length > 1 && list.length <= 20000) list.forEach((id, i) => { const a = p.series(kind, i, +v); let m = 0; for (const x of a) m = Math.max(m, Math.abs(x)); if (m > bestv) { bestv = m; best = i; } });
+  sel.value = best;
+  return true;
+}
+function drawRunChart() {
+  const L = LAST; if (!L || !L.p.epa || !L.p.rs || !L.p.cpp || !$('#seriesId').options.length) return;
+  const [kind, v] = $('#seriesKind').value.split(':');
+  const idx = +$('#seriesId').value || 0;
+  const ya = L.p.epa.series(kind, idx, +v), yc = L.p.cpp.series(kind, idx, +v), yr = L.p.rs.series(kind, idx, +v);
+  const x = Array.from(ya, (_, k) => (k + 1) * L.p.epa.step / 3600);
+  const unit = unitOf(kind, +v, L.p.epa);
+  const flow = FLOWISH[kind].includes(+v), V = SWCMP.VOL[L.p.epa.flowUnits] || null;
+  const vf = flow && V ? V.f : null, volU = flow && V ? V.u : '';
+  const sR = SWCMP.seriesStats(ya, yr, L.p.epa.step, vf), sC = SWCMP.seriesStats(ya, yc, L.p.epa.step, vf);
+  lineChart($('#runChart'), { x, xlabel: 'hours from start', ylabel: unit, series: [{ y: ya, color: 'var(--epa)', w: 3.4 }, { y: yc, color: 'var(--cpp)', w: 1.8, dash: '7 5' }, { y: yr, color: 'var(--rs)', w: 1.6, dash: '1.5 4' }] });
+  $('#diffNote').textContent = `largest difference from EPA: Rust ${sR.maxAbs === 0 ? '0 (exactly)' : sR.maxAbs.toPrecision(3)}, C++ ${sC.maxAbs === 0 ? '0 (exactly)' : sC.maxAbs.toPrecision(3)}`;
+  const id = kind === 'sys' ? 'system' : L.p.epa.ids[kind][idx];
+  $('#seriesStats').innerHTML = statsHtml3(sR, sC, unit, volU);
+  $('#seriesStatsNote').textContent = (sR.differ === 0 && sC.differ === 0
+    ? `${id}: the three series are the same bits at all ${fmt(sR.n)} reporting periods, so every difference is exactly 0 and Nash–Sutcliffe and R² are exactly 1. The table is the instrument that would show a difference.`
+    : `${id}: swmm5-rust differs from EPA at ${fmt(sR.differ)} and swmm5-cplus at ${fmt(sC.differ)} of ${fmt(sR.n)} reporting periods.`) + (flow ? ` Volume is the sum of the reported values times the ${fmt(L.p.epa.step)} s step, in the unit of EPA's continuity table.` : '');
+  L.series = { kind, v, idx, id, x, ya, yc, yr, unit, sR, sC, volU };
+}
+function renderOutAll() {
+  const L = LAST, rR = L && SWCMP.compareOut(L.p.epa, L.p.rs), rC = L && SWCMP.compareOut(L.p.epa, L.p.cpp);
+  if (!rR || !rC) { $('#outAllLine').textContent = 'Not all three engines wrote a binary output for this model, so there is nothing to compare value by value.'; $('#outAll').innerHTML = ''; return; }
+  if (!rR.comparable || !rC.comparable) { $('#outAllLine').textContent = 'The .out files have different layouts (element or period counts), so they cannot be compared value by value.'; $('#outAll').innerHTML = ''; return; }
+  $('#outAllLine').innerHTML = `${fmt(rR.values)} values in each file: every variable of every element at every one of ${fmt(rR.nPer)} reporting periods. Against EPA, <b>${fmt(rR.differ)}</b> differ in swmm5-rust and <b>${fmt(rC.differ)}</b> in swmm5-cplus.` + (rR.differ === 0 && rC.differ === 0 ? ' That follows from the byte-identical files; the count is where a difference would show.' : '');
+  const nm = { sub: 'Subcatchments', node: 'Nodes', link: 'Links', sys: 'System' };
+  $('#outAll').innerHTML = '<thead><tr><th>Group</th><th class="num">Elements</th><th class="num">Variables each</th><th class="num">Values</th><th class="num">Rust differs</th><th class="num">C++ differs</th><th class="num">Largest |difference|, Rust</th><th>Where</th></tr></thead><tbody>' +
+    Object.entries(rR.groups).map(([g, x]) => `<tr><td>${nm[g]}</td><td class="num">${fmt(x.elements)}</td><td class="num">${x.vars}</td><td class="num">${fmt(x.values)}</td><td class="num">${fmt(x.differ)}</td><td class="num">${fmt(rC.groups[g].differ)}</td><td class="num">${fs(x.maxAbs)}</td><td>${esc(x.where || '—')}</td></tr>`).join('') + '</tbody>';
+}
+function renderRpt() {
+  const L = LAST, t = k => L.d[k].rpt ? dec.decode(L.d[k].rpt) : '';
+  const cR = SWCMP.compareRpt(t('epa'), t('rs')), cC = SWCMP.compareRpt(t('epa'), t('cpp')); L.rptR = cR; L.rptC = cC;
+  const secs = cR.sections.filter(s => s.title !== 'Header');
+  $('#rptLine').innerHTML = `${fmt(cR.linesA)} lines in EPA's report after dropping the wall-clock lines; swmm5-rust's matches <b>${fmt(cR.sameLines)}</b> of them line for line and swmm5-cplus's <b>${fmt(cC.sameLines)}</b>. ` +
+    `${fmt(cR.numbers)} numbers read from ${secs.length} sections: <b>${fmt(cR.sameNumbers)}</b> identical as printed in Rust's, <b>${fmt(cC.sameNumbers)}</b> in C++'s` +
+    (cR.maxRel > 0 || cC.maxRel > 0 ? `; the largest relative difference is ${(100 * Math.max(cR.maxRel, cC.maxRel)).toFixed(3)}%.` : ', so every difference below is exactly 0.');
+  const dcell = (va, vb) => (va === null || vb === null || va === undefined || vb === undefined) ? `<td class="num dif">—</td>` : `<td class="num dif${va === vb ? '' : ' nz'}">${fsd(+(vb - va).toPrecision(6))}</td>`;
+  const hR = SWCMP.headline(cR), hC = SWCMP.headline(cC);
+  $('#rptHead').innerHTML = '<thead><tr><th>Result</th><th class="num">EPA 5.2.4</th><th class="num">swmm5-cplus</th><th class="num">swmm5-rust</th><th class="num">Rust − EPA</th><th class="num">C++ − EPA</th></tr></thead><tbody>' +
+    (hR.length ? hR.map((h, i) => { const c = hC.find(x => x.name === h.name) || {}; return `<tr><td class="lab">${esc(h.name)}</td><td class="num">${esc(h.a)}</td><td class="num">${esc(c.b === undefined ? '—' : c.b)}</td><td class="num">${esc(h.b)}</td>${dcell(h.va, h.vb)}${dcell(c.va, c.vb)}</tr>`; }).join('') : '<tr><td colspan="6" class="muted">This report has no continuity or summary tables (an input error stops the run before they are written).</td></tr>') + '</tbody>';
+  const items = cR.items.map((i, k) => [i, cC.items[k]]).filter(([i]) => /Continuity|Time Step Summary/.test(i.section) && i.va !== null);
+  let last = '';
+  $('#rptItems').innerHTML = '<thead><tr><th>Item</th><th class="num">EPA 5.2.4</th><th class="num">swmm5-cplus</th><th class="num">swmm5-rust</th><th class="num">Rust − EPA</th><th class="num">C++ − EPA</th><th>Unit</th></tr></thead><tbody>' +
+    (items.length ? items.map(([i, c]) => { c = c || {}; const g = i.section !== last ? `<tr class="grp"><td colspan="7">${esc(i.section)}</td></tr>` : ''; last = i.section; return g + `<tr><td class="lab">${esc(i.label)}</td><td class="num">${esc(i.a)}</td><td class="num">${esc(c.b === undefined ? '—' : c.b)}</td><td class="num">${esc(i.b)}</td>${dcell(i.va, i.vb)}${dcell(c.va, c.vb)}<td class="lab">${esc(i.unit.replace(/^(Volume|Depth) /, ''))}</td></tr>`; }).join('') : '<tr><td colspan="7" class="muted">No continuity tables in this report.</td></tr>') + '</tbody>';
+  $('#rptCols').innerHTML = '<thead><tr><th>Table</th><th>Column</th><th class="num">Rows</th><th class="num">EPA largest</th><th class="num">Rust identical</th><th class="num">C++ identical</th><th class="num">Largest |difference|</th></tr></thead><tbody>' +
+    (cR.columns.length ? cR.columns.map((k, j) => { const c = cC.columns[j] || { same: 0, maxAbs: 0 }; const mx = Math.max(k.maxAbs, c.maxAbs); return `<tr><td class="lab">${esc(k.section)}</td><td>${esc(k.name)}</td><td class="num">${fmt(k.n)}</td><td class="num">${k.time ? hhmm(k.maxA / 60) : fs(k.maxA)}</td><td class="num">${fmt(k.same)} of ${fmt(k.n)}</td><td class="num">${fmt(c.same)} of ${fmt(c.n || k.n)}</td><td class="num dif${mx ? ' nz' : ''}">${fs(mx)}${k.time && mx ? ' min' : ''}</td></tr>`; }).join('') : '<tr><td colspan="7" class="muted">No summary tables in this report.</td></tr>') + '</tbody>';
+  const secsC = cC.sections.filter(s => s.title !== 'Header');
+  $('#rptSecs').innerHTML = '<thead><tr><th>Section</th><th>Kind</th><th class="num">Rows</th><th class="num">Numbers</th><th class="num">Rust identical</th><th class="num">C++ identical</th><th class="num">Text differences</th></tr></thead><tbody>' +
+    secs.map((k, j) => { const c = secsC[j] || {}; return `<tr><td>${esc(k.title)}</td><td class="lab">${k.kind}</td><td class="num">${fmt(k.rows)}</td><td class="num">${fmt(k.numbers)}</td><td class="num">${fmt(k.same)}</td><td class="num">${fmt(c.same || 0)}</td><td class="num">${fmt(k.textDiff + (c.textDiff || 0))}</td></tr>`; }).join('') + '</tbody>';
+  const sel = $('#rptSecSel'); sel.innerHTML = '';
+  secs.forEach((k, i) => { const o = document.createElement('option'); o.value = i; o.textContent = k.title; sel.appendChild(o); });
+  L.rptSecs = secs; L.rptSecsC = secsC; showRptSection();
+}
+function showRptSection() {
+  const L = LAST; if (!L || !L.rptSecs || !L.rptSecs.length) { ['#rptPaneA', '#rptPaneB', '#rptPaneC'].forEach(s => $(s).textContent = ''); return; }
+  const i = +$('#rptSecSel').value || 0, k = L.rptSecs[i], kc = L.rptSecsC[i];
+  const txt = s => s ? ['  ' + s.title, ...s.lines].join('\n').replace(/\s+$/, '') : '(section missing)';
+  $('#rptPaneA').textContent = txt(k.a); $('#rptPaneB').textContent = txt(k.b); $('#rptPaneC').textContent = txt(kc && kc.b);
+}
+$('#rptSecSel').addEventListener('change', showRptSection);
+$('#saveRpt').addEventListener('click', () => {
+  const L = LAST; if (!L || !L.rptR) return;
+  const q = x => `"${String(x).replace(/"/g, '""')}"`;
+  let csv = 'section,row,column,EPA 5.2.4,swmm5-rust,swmm5-cplus,rust abs difference\n';
+  L.rptR.sections.forEach((k, si) => {
+    const kc = L.rptC.sections[si];
+    if (!k.b) return;
+    k.a.rows.forEach((ra, r) => {
+      const rb = k.b.rows[r], rc = kc && kc.b ? kc.b.rows[r] : null; if (!rb) return;
+      ra.cells.forEach((ca, j) => {
+        const cb = rb.cells[j], cc = rc ? rc.cells[j] : null; if (!ca || !cb || ca.v === null) return;
+        const col = k.a.cols ? k.a.cols[j] : (k.a.units && k.a.units[j]) || 'value ' + (j + 1);
+        csv += `${q(k.title)},${q(ra.key)},${q(col)},${q(ca.t)},${q(cb.t)},${q(cc ? cc.t : '')},${cb.v === null ? '' : Math.abs(cb.v - ca.v)}\n`;
+      });
+    });
+  });
+  save(L.file.replace(/\.inp$/i, '') + '_rpt_comparison.csv', csv);
+});
+$('#saveStats').addEventListener('click', () => {
+  const s = LAST && LAST.series; if (!s) return;
+  save(LAST.file.replace(/\.inp$/i, '') + '_' + s.id + '_statistics.csv', statsCsv3(s.sR, s.sC, s.unit, s.volU));
+});
+$('#seriesKind').addEventListener('change', () => { if (fillSeriesIds()) drawRunChart(); });
+$('#seriesId').addEventListener('change', drawRunChart);
+function seriesCsv() {
+  const s = LAST && LAST.series; if (!s) return null;
+  let csv = `hours,${s.id} EPA 5.2.4 (${s.unit}),${s.id} swmm5-cplus (${s.unit}),${s.id} swmm5-rust (${s.unit}),rust minus epa,cplus minus epa\n`;
+  for (let k = 0; k < s.x.length; k++) csv += `${s.x[k].toFixed(4)},${s.ya[k]},${s.yc[k]},${s.yr[k]},${s.yr[k] - s.ya[k]},${s.yc[k] - s.ya[k]}\n`;
+  return csv;
+}
+$('#saveSeries').addEventListener('click', () => { const c = seriesCsv(); if (c) save(LAST.file.replace(/\.inp$/i, '') + '_' + LAST.series.id + '.csv', c); });
+$('#saveZip').addEventListener('click', () => {
+  if (!LAST) return; const b = LAST.file.replace(/\.inp$/i, ''), d = LAST.d;
+  const files = [[b + '_epa524.out', d.epa.out], [b + '_epa524.rpt', d.epa.rpt], [b + '_swmm5cplus.out', d.cpp.out], [b + '_swmm5cplus.rpt', d.cpp.rpt], [b + '_swmm5rust.out', d.rs.out], [b + '_swmm5rust.rpt', d.rs.rpt]].filter(f => f[1] && f[1].length);
+  save(b + '_three_engines.zip', makeZip(files));
+});
+
+/* ---------------------------------------------------------------- tiny ZIP writer (stored) */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u) { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  for (const [name, data] of files) {
+    const nm = enc.encode(name), crc = crc32(data), h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+    parts.push(new Uint8Array(h.buffer), nm, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+    central.push(new Uint8Array(c.buffer), nm);
+    off += 30 + nm.length + data.length;
+  }
+  const csize = central.reduce((a, b) => a + b.length, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)]);
+}
+
+/* ---------------------------------------------------------------- MANY tab */
+const MANYSET = SAMPLES.filter(s => !/^lid_error/.test(s.key));
+MANYSET.forEach((s, i) => {
+  $('#manyList').insertAdjacentHTML('beforeend', `<label style="display:flex;gap:8px;align-items:center;padding:3px 0"><input type="checkbox" id="mk${i}" checked> <span>${esc(s.name)}</span> <span class="faint">${esc(s.units)}</span></label>`);
+});
+let MANY = null;
+$('#manyBtn').addEventListener('click', async () => {
+  await READY;
+  const pick = MANYSET.map((s, i) => [s, i]).filter(([s, i]) => $('#mk' + i).checked);
+  if (!pick.length) { toast('Tick at least one model.'); return; }
+  const tb = $('#manyTable tbody'); tb.innerHTML = '';
+  pick.forEach(([s], j) => tb.insertAdjacentHTML('beforeend', `<tr><td>${esc(s.name)}</td><td><div class="prog"><span id="pg${j}"></span></div></td><td class="num" id="st${j}">0</td><td id="sh${j}" style="font-family:var(--font-mono)"></td><td id="vs${j}"></td></tr>`));
+  $('#manyBtn').disabled = true; $('#manyStatus').textContent = 'Solo EPA runs first, then all together…';
+  const dur = pick.map(([s]) => s.days || 1);
+  let solo = null;
+  try {
+    const d = await call({ type: 'multi', models: pick.map(([s]) => ({ inp: s.text })) }, (p) => {
+      if (p.type === 'solo') { solo = p.solo; $('#manyStatus').textContent = 'Stepping ' + pick.length + ' models in one swmm5-rust instance…'; }
+      if (p.type === 'progress') {
+        const frac = p.done ? 1 : Math.min(1, p.t / dur[p.i]);
+        $('#pg' + p.i).style.width = (100 * frac).toFixed(1) + '%'; $('#st' + p.i).textContent = fmt(p.steps);
+      }
+    });
+    const r = d.r; let same = 0; const rows = [];
+    for (let j = 0; j < r.res.length; j++) {
+      const x = r.res[j], hc = await sha256(x.out), he = await sha256(solo[j].out);
+      const eq = hc === he && normRpt(x.rpt) === normRpt(solo[j].rpt); if (eq) same++;
+      $('#pg' + j).style.width = '100%'; $('#st' + j).textContent = fmt(x.steps);
+      $('#sh' + j).textContent = hc.slice(0, 12);
+      $('#vs' + j).innerHTML = eq ? '<span class="tag ok">identical</span>' : '<span class="tag warn">differs</span>';
+      rows.push({ name: pick[j][0].name, steps: x.steps, sha: hc, eq });
+    }
+    MANY = { rows, r, same };
+    $('#manyFoot').textContent = `${r.live} handles were open at once in one WebAssembly instance; ${fmt(r.rounds)} rounds of stepping; ${same} of ${r.res.length} outputs (.out and .rpt) identical to solo EPA runs; ${r.after} handles left after cleanup.`;
+    $('#manyStatus').textContent = 'Done.';
+  } catch (e) { $('#manyStatus').textContent = 'Failed: ' + e.message; }
+  $('#manyBtn').disabled = false;
+});
+
+/* ---------------------------------------------------------------- INSIDE tab */
+function tiles(el, arr) { $(el).innerHTML = arr.map(([n, l]) => `<div class="tile"><div class="n">${n}</div><div class="l">${l}</div></div>`).join(''); }
+tiles('#insideTiles', D.insideTiles);
+$('#figPipelineIn').innerHTML = D.figs.pipeline; $('#figUnsafeIn').innerHTML = D.figs.unsafe; $('#figBorrowIn').innerHTML = D.figs.borrow;
+$('#figDecksIn').innerHTML = D.figs.memdecks;
+$('#reprTable').innerHTML = '<thead><tr><th>In EPA\'s C</th><th>In swmm5-rust</th><th>How often</th></tr></thead><tbody>' + D.repr.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('') + '</tbody>';
+D.code.forEach((c, i) => { const o = document.createElement('option'); o.value = i; o.textContent = c.title; $('#codeSel').appendChild(o); });
+function showCode() {
+  const c = D.code[+$('#codeSel').value || 0];
+  $('#codeWhy').textContent = c.why;
+  [['c', '#codeC', '#codeCap0', 'EPA 5.2.4 (C)'], ['cpp', '#codeCpp', '#codeCap1', 'swmm5-cplus (C++)'], ['rs', '#codeRs', '#codeCap2', 'swmm5-rust']].forEach(([k, el, cap, nm]) => {
+    $(el).textContent = c[k].text; $(cap).textContent = `${nm} · ${c[k].file}:${c[k].line}`;
+  });
+}
+$('#codeSel').addEventListener('change', showCode); showCode();
+$('#defects').innerHTML = D.defects.map(d => `<div class="defect"><div class="h"><span class="id">${d.id}</span><span>${esc(d.title)}</span><span class="tag ${d.statusKind}">${esc(d.status)}</span></div><p style="margin:6px 0">${d.body}</p><p class="faint" style="margin:0">${esc(d.where)}, EPA 5.2.4 as released:</p>${d.code ? '<pre class="code">' + esc(d.code) + '</pre>' : ''}</div>`).join('');
+
+// RS-1 live: both orders, all three engines
+let STORAGE = null;
+const SO = ['storage_order_A', 'storage_order_B'].map(k => SAMPLES.find(s => s.key === k));
+$('#storageBtn').addEventListener('click', async () => {
+  await READY;
+  $('#storageBtn').disabled = true; $('#storageStatus').textContent = 'Running two orders in three engines…';
+  try {
+    const d = await call({ type: 'batch', models: SO.map(s => ({ name: s.key, file: s.file, text: s.text })) });
+    const res = [];
+    for (const m of d.out) {
+      const row = { order: m.name.slice(-1) };
+      for (const [k] of ENG) {
+        const p = parseOut(m[k].out); const ni = n => p.ids.node.indexOf(n);
+        row[k] = { sha: await sha256(m[k].out), s1: p.series('node', ni('S1'), 0), s2: p.series('node', ni('S2'), 0), step: p.step, rpt: normRpt(m[k].rpt) };
+      }
+      res.push(row);
+    }
+    STORAGE = res; drawStorage();
+    $('#storageStatus').textContent = 'Done.';
+  } catch (e) { $('#storageStatus').textContent = 'Failed: ' + e.message; }
+  $('#storageBtn').disabled = false;
+});
+function drawStorage() {
+  if (!STORAGE) return;
+  const [A, B] = STORAGE, n = Math.min(A.epa.s2.length, 6 * 3600 / A.epa.step | 0);
+  const x = Array.from({ length: n }, (_, k) => (k + 1) * A.epa.step / 3600), cut = a => Array.from(a).slice(0, n);
+  lineChart($('#storageChart'), { x, xlabel: 'hours', ylabel: 'depth, ft', series: [{ y: cut(B.epa.s1), color: 'var(--f-dim)', w: 2 }, { y: cut(B.epa.s2), color: 'var(--f-c)', w: 3 }, { y: cut(A.epa.s2), color: 'var(--f-d)', w: 2.2, dash: '7 5' }] });
+  const pk = a => Math.max(...a), maxd = (a, b) => { let m = 0; for (let i = 0; i < a.length; i++) m = Math.max(m, Math.abs(a[i] - b[i])); return m; };
+  const tagEq = ok => ok ? '<span class="tag ok">identical to EPA</span>' : '<span class="tag warn">differs from EPA</span>';
+  $('#storageTable').innerHTML = '<thead><tr><th>Order</th><th>Engine</th><th class="num">Peak depth S1, ft</th><th class="num">Peak depth S2, ft</th><th class="num">Largest |S2 − S1|, ft</th><th>.out SHA-256 (first 12)</th><th>.out and .rpt</th></tr></thead><tbody>' +
+    STORAGE.map(r => ENG.map(([k, nm]) => `<tr><td>${r.order === 'A' ? 'A: outfall first' : 'B: storage first'}</td><td>${nm}</td><td class="num">${pk(r[k].s1).toFixed(3)}</td><td class="num">${pk(r[k].s2).toFixed(3)}</td><td class="num">${fs(maxd(r[k].s1, r[k].s2))}</td><td style="font-family:var(--font-mono)">${r[k].sha.slice(0, 12)}</td><td>${k === 'epa' ? 'reference' : tagEq(r[k].sha === r.epa.sha && r[k].rpt === r.epa.rpt)}</td></tr>`).join('')).join('') + '</tbody>';
+}
+// RS-5..9 live: the six decks
+let DECKS = null;
+$('#decksBtn').addEventListener('click', async () => {
+  await READY;
+  $('#decksBtn').disabled = true; $('#decksStatus').textContent = 'Running six decks in three engines…';
+  try {
+    const d = await call({ type: 'batch', models: D.decks.map(s => ({ name: s.name, file: s.name + '.inp', text: s.text, skip: s.skip })) });
+    DECKS = d.out.map((m, i) => ({ name: m.name, r: Object.fromEntries(ENG.map(([k]) => [k, m[k].skipped ? Object.assign({ skipped: true }, D.decks[i].recorded[k]) : { rc: m[k].rc, trap: m[k].trap, panic: m[k].panic, rpt: (m[k].rpt || []).length, out: (m[k].out || []).length, err: ((m[k].rpt ? dec.decode(m[k].rpt) : '').match(/ERROR[^\n]*/) || [''])[0].trim() }])) }));
+    const cell = x => x.skipped ? `<span class="tag warn">not run here</span><div class="faint">Recorded in node: ${esc(x.trap ? 'trap, ' + x.trap : 'rc ' + x.rc)}. In Chromium this out-of-bounds access takes the whole tab down, so the page does not try it.</div>` : x.trap ? `<span class="tag ${x.panic ? 'panel' : 'warn'}">${x.panic ? 'stopped' : 'trapped'}</span><div class="faint">${esc((x.panic || x.trap).split('\n').slice(0, 2).join(' '))}</div>` :
+      (x.err ? `<span class="tag ok">error report</span><div class="faint">${esc(x.err)}</div>` : `<span class="tag hi">ran on</span><div class="faint">rc ${esc(x.rc)}, report ${fmt(x.rpt)} bytes, .out ${fmt(x.out)} bytes</div>`);
+    $('#decksTable').innerHTML = '<thead><tr><th>Deck</th><th>What C does</th><th>EPA 5.2.4 (wasm)</th><th>swmm5-cplus (wasm)</th><th>swmm5-rust (wasm)</th></tr></thead><tbody>' +
+      DECKS.map((x, i) => `<tr><td style="font-family:var(--font-mono)">${esc(x.name)}</td><td class="muted">${esc(D.decks[i].what)}</td><td>${cell(x.r.epa)}</td><td>${cell(x.r.cpp)}</td><td>${cell(x.r.rs)}</td></tr>`).join('') + '</tbody>';
+    $('#decksStatus').textContent = 'Done.';
+  } catch (e) { $('#decksStatus').textContent = 'Failed: ' + e.message; }
+  $('#decksBtn').disabled = false;
+});
+
+/* ---------------------------------------------------------------- VERIFY tab */
+$('#parityBox').innerHTML = D.verify.parity;
+tiles('#verifyTiles', D.verify.tiles);
+$('#figGateV').innerHTML = D.figs.gate;
+if (D.figs.corpus) { $('#corpusCard').hidden = false; $('#figCorpusV').innerHTML = D.figs.corpus; }
+$('#figWasmV').innerHTML = D.figs.wasm; $('#figDecksV').innerHTML = D.figs.memdecks; $('#figCioV').innerHTML = D.figs.cio;
+$('#wasmNote').textContent = (D.verify.wasmBad.length ? 'Models where swmm5-rust\'s WebAssembly output differs from EPA\'s: ' + D.verify.wasmBad.join(', ') + '. ' : '') +
+  (D.verify.platBad.length ? 'Models where EPA\'s C differs from itself between native and WebAssembly: ' + D.verify.platBad.join(', ') + '.' : '');
+if (D.figs.timing) { $('#timingCard').hidden = false; $('#figTimingV').innerHTML = D.figs.timing; $('#figTimingW').innerHTML = D.figs.timing_wasm || ''; }
+$('#controls').innerHTML = '<ul style="margin:0;padding-left:18px">' + D.verify.controls.map(c => `<li style="margin-bottom:6px">${c}</li>`).join('') + '</ul>';
+$('#limitsBox').innerHTML = D.verify.limits;
+
+/* ---------------------------------------------------------------- ABOUT + DOC */
+$('#provTable').innerHTML = '<tbody>' + D.prov.map(([k, v]) => `<tr><td class="muted" style="white-space:nowrap">${k}</td><td style="font-family:var(--font-mono);overflow-wrap:anywhere">${v}</td></tr>`).join('') + '</tbody>';
+$('#provCommit').textContent = D.commit.slice(0, 7);
+$('#essay').innerHTML = D.essayHtml;
+$('#toc').innerHTML = '<p class="kicker">Contents</p>' + D.toc.map(([a, t]) => `<a href="#${a}" data-a="${a}">${esc(t)}</a>`).join('') + '<p class="faint" style="margin-top:12px">The same essay, with the same figures, as a Word document.</p><button class="btn" id="saveDocx" type="button" style="margin-top:6px">Download the .docx</button>';
+$('#saveDocx').addEventListener('click', () => { const t = $('#docx-b64').textContent.trim(); if (!t) { toast('The .docx was not built into this copy.'); return; } save('swmm5-rust-doc.docx', b64bytes('#docx-b64')); });
+$$('#toc a').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); const t = document.getElementById(a.dataset.a); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+$$('.essay .fig svg, .figwrap svg').forEach(s => s.setAttribute('preserveAspectRatio', 'xMinYMin meet'));
+
+function redrawCharts() { if (LAST && LAST.series) drawRunChart(); if (STORAGE) drawStorage(); }
+
+/* ---------------------------------------------------------------- export (CSV of the current view) */
+$('#exportBtn').addEventListener('click', () => {
+  if (CURRENT === 'run' && LAST && LAST.series) return $('#saveSeries').click();
+  if (CURRENT === 'many' && MANY) {
+    let csv = 'model,steps,out_sha256,identical_to_solo_epa\n';
+    MANY.rows.forEach(r => { csv += `"${r.name}",${r.steps},${r.sha},${r.eq}\n`; });
+    return save('swmm5rust_many_at_once.csv', csv);
+  }
+  if (CURRENT === 'inside' && (STORAGE || DECKS)) {
+    let csv = '';
+    if (STORAGE) { csv += 'order,engine,peak_depth_S1_ft,peak_depth_S2_ft,out_sha256\n'; STORAGE.forEach(r => ENG.forEach(([k, nm]) => { csv += `${r.order},${nm},${Math.max(...r[k].s1)},${Math.max(...r[k].s2)},${r[k].sha}\n`; })); }
+    if (DECKS) { csv += (csv ? '\n' : '') + 'deck,engine,rc,stopped,message,report_bytes,out_bytes\n'; DECKS.forEach(x => ENG.forEach(([k, nm]) => { const r = x.r[k]; csv += `${x.name},${nm},${r.rc},${!!r.trap},"${(r.panic || r.trap || r.err).split('\n')[0].replace(/"/g, '""')}",${r.rpt},${r.out}\n`; })); }
+    return save('swmm5rust_inside_experiments.csv', csv);
+  }
+  if (CURRENT === 'verify') return save('swmm5rust_gates_by_folder.csv', D.verify.csv);
+  toast('Run something on this tab first, or open Verify for the gate tables.');
+});
+
+/* ---------------------------------------------------------------- welcome + tour */
+const TOUR = [
+  ['#tablist', 'Move between the six tabs', 'Run compares one model on three engines. Many at once opens several models in one Rust instance. Inside, Verify and Doc show how it was built and proven.'],
+  ['#sampleSel', 'Choose a model', 'Seven EPA examples and four test models are built in, including the ones behind the defect register. You can also open your own .inp, plus any data files it names.'],
+  ['#runBtn', 'Run all three engines', 'EPA 5.2.4, swmm5-cplus and swmm5-rust each run the model in a background worker, compiled to WebAssembly.'],
+  ['#verdictCard', 'Read the verdict', 'The .out files are compared byte for byte by SHA-256, the reports line for line minus the wall-clock lines.'],
+  ['#runChart', 'Check the series', 'Three time series drawn over each other, with a statistics table under the chart: peak, time of peak, volume, RMSE, Nash–Sutcliffe and R², against EPA.'],
+  ['#rptCard', 'Compare the reports', 'Every number in the three .rpt files is read and compared: headline results, continuity tables, and every summary table column by column.'],
+  ['[data-view="inside"]', 'See what the translation found', 'Inside shows C, C++ and Rust side by side, two live experiments and the defect register with the C lines as released.'],
+  ['#helpBtn', 'Come back any time', 'The ? button reopens this guide.']
+];
+function endTour() { $$('.tour,.spot').forEach(n => n.remove()); }
+function tourStep(i) {
+  $$('.tour,.spot').forEach(n => n.remove());
+  if (i < 0 || i >= TOUR.length) return endTour();
+  if (i <= 5) showView('run');
+  const [sel, title, body] = TOUR[i], el = $(sel); if (!el) return tourStep(i + 1);
+  el.scrollIntoView({ block: 'center' });
+  const r = el.getBoundingClientRect();
+  const spot = document.createElement('div'); spot.className = 'spot';
+  Object.assign(spot.style, { left: (r.left - 4) + 'px', top: (r.top - 4) + 'px', width: (r.width + 8) + 'px', height: (r.height + 8) + 'px' });
+  const tip = document.createElement('div'); tip.className = 'tour';
+  tip.innerHTML = `<h4>${i + 1}. ${title}</h4><div class="muted">${body}</div><div class="row"><button class="btn ghost" type="button" data-k="end">Close</button><span><button class="btn ghost" type="button" data-k="prev" ${i === 0 ? 'disabled' : ''}>Back</button> <button class="btn" type="button" data-k="next">${i === TOUR.length - 1 ? 'Done' : 'Next'}</button></span></div>`;
+  document.body.append(spot, tip);
+  const top = r.bottom + 12 + 180 < innerHeight ? r.bottom + 12 : Math.max(12, r.top - 12 - tip.offsetHeight);
+  Object.assign(tip.style, { left: Math.max(12, Math.min(innerWidth - tip.offsetWidth - 12, r.left)) + 'px', top: top + 'px' });
+  tip.addEventListener('click', (e) => { const k = e.target.dataset.k; if (k === 'end') endTour(); if (k === 'prev') tourStep(i - 1); if (k === 'next') tourStep(i + 1); });
+}
+function openWelcome() { $('#welcome').hidden = false; $('#welcomeClose').focus(); }
+$('#helpBtn').addEventListener('click', openWelcome);
+$('#welcomeClose').addEventListener('click', () => { $('#welcome').hidden = true; try { localStorage.setItem('swmm5rust_seen', '1'); } catch (e) {} });
+$('#tourBtn').addEventListener('click', () => { $('#welcome').hidden = true; tourStep(0); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('#welcome').hidden = true; endTour(); } });
+
+/* ---------------------------------------------------------------- Make a GIF (html2canvas frames -> GIF, WebM fallback) */
+let REC = null;
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+$('#gifBtn').addEventListener('click', async () => {
+  if (REC) { REC.stop = true; return; }
+  if (!DL) { toast('Saving a GIF needs the claude.ai viewer.'); }
+  try { if (!window.html2canvas) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'); }
+  catch (e) { toast('The capture library could not load.'); return; }
+  REC = { frames: [], stop: false }; $('#gifBtn').textContent = 'Recording… click to stop';
+  const steps = [['run', 'Run: one model, three engines, byte-identical'], ['many', 'Many at once: every sample in one Rust instance'], ['inside', 'Inside: C, C++ and Rust, and what the translation found'], ['verify', 'Verify: the gates and the controls']];
+  const css = getComputedStyle(document.documentElement);
+  const bg = getComputedStyle(document.body).backgroundColor, capbar = css.getPropertyValue('--capbar').trim(), capink = css.getPropertyValue('--capink').trim();
+  for (const [v, cap] of steps) {
+    if (REC.stop) break;
+    showView(v); await new Promise(r => setTimeout(r, 400));
+    if (v === 'inside' && !STORAGE) { $('#storageBtn').click(); await new Promise(r => setTimeout(r, 1500)); }
+    for (let k = 0; k < 4 && !REC.stop; k++) {
+      const c = await html2canvas($('#app'), { backgroundColor: bg, scale: 0.6, logging: false, height: Math.min($('#app').scrollHeight, 900), windowHeight: 900 });
+      const ctx = c.getContext('2d'); ctx.fillStyle = capbar; ctx.fillRect(0, c.height - 30, c.width, 30);
+      ctx.fillStyle = capink; ctx.font = '15px sans-serif'; ctx.fillText(cap, 12, c.height - 10);
+      REC.frames.push(c); await new Promise(r => setTimeout(r, 350));
+    }
+  }
+  const frames = REC.frames; REC = null; $('#gifBtn').textContent = 'Make a GIF';
+  if (!frames.length) return;
+  let blob = null, ext = 'gif';
+  try {
+    if (!window.GIF) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js');
+    const wurl = URL.createObjectURL(new Blob(["importScripts('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');"], { type: 'text/javascript' }));
+    blob = await new Promise((res, rej) => {
+      const g = new GIF({ workers: 2, quality: 12, workerScript: wurl, width: frames[0].width, height: frames[0].height });
+      frames.forEach(f => g.addFrame(f, { delay: 700 })); g.on('finished', res); g.on('abort', () => rej(new Error('aborted')));
+      setTimeout(() => rej(new Error('timeout')), 60000); g.render();
+    });
+  } catch (e) {
+    try {
+      ext = 'webm';
+      const cv = document.createElement('canvas'); cv.width = frames[0].width; cv.height = frames[0].height;
+      const cx = cv.getContext('2d'), st = cv.captureStream(4), mr = new MediaRecorder(st, { mimeType: 'video/webm' }), ch = [];
+      mr.ondataavailable = ev => ch.push(ev.data);
+      blob = await new Promise(res => { mr.onstop = () => res(new Blob(ch, { type: 'video/webm' })); mr.start(); let i = 0; const nx = () => { if (i >= frames.length) return mr.stop(); cx.drawImage(frames[i++], 0, 0); setTimeout(nx, 700); }; nx(); });
+    } catch (e2) { toast('This browser cannot encode the recording.'); return; }
+  }
+  save('swmm5-rust-walkthrough.' + ext, blob);
+});
+
+/* ---------------------------------------------------------------- boot */
+(function init() {
+  let pref = 'dark'; try { const v = localStorage.getItem('swmm5rust_theme'); if (v === 'light' || v === 'auto' || v === 'dark') pref = v; } catch (e) {}
+  applyTheme(pref);
+  const h = location.hash.slice(1); if (h && $('#view-' + h)) showView(h);
+  let seen = false; try { seen = localStorage.getItem('swmm5rust_seen') === '1'; } catch (e) {}
+  if (!seen) openWelcome();
+  boot();
+})();
+</script>

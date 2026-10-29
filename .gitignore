@@ -3,3 +3,7 @@ ref/
 *.out
 /scratch/
 build/
+app/doc/out/*
+!app/doc/out/swmm5-rust-doc.docx
+app/node_modules/
+__pycache__/

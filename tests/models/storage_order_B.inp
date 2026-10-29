@@ -1,0 +1,81 @@
+[TITLE]
+Storage index read as a node index (storage_getVolDiff). Same network, two section orders: B: storage first (each storage unit is node k)
+
+[OPTIONS]
+FLOW_UNITS           CFS
+INFILTRATION         HORTON
+FLOW_ROUTING         KINWAVE
+START_DATE           06/01/2026
+START_TIME           00:00:00
+REPORT_START_DATE    06/01/2026
+REPORT_START_TIME    00:00:00
+END_DATE             06/01/2026
+END_TIME             12:00:00
+DRY_DAYS             0
+REPORT_STEP          00:05:00
+WET_STEP             00:01:00
+DRY_STEP             01:00:00
+ROUTING_STEP         0:00:30
+
+[RAINGAGES]
+;;Name  Format    Interval SCF Source
+RG1     INTENSITY 0:15     1.0 TIMESERIES Storm
+
+[SUBCATCHMENTS]
+;;Name Gage Outlet Area %Imperv Width %Slope CurbLen
+SC1    RG1  S1     15   60      1200  1.0    0
+SC2    RG1  S2     15   60      1200  1.0    0
+
+[SUBAREAS]
+;;Subcat N-Imperv N-Perv S-Imperv S-Perv PctZero RouteTo
+SC1      0.015    0.24   0.06     0.3    25      OUTLET
+SC2      0.015    0.24   0.06     0.3    25      OUTLET
+
+[INFILTRATION]
+;;Subcat MaxRate MinRate Decay DryTime MaxInfil
+SC1      3.0     0.5     4     7       0
+SC2      3.0     0.5     4     7       0
+
+[STORAGE]
+;;Name Elev MaxDepth InitDepth Shape      Params ...         SurDepth Fevap
+S1     100  12       0         FUNCTIONAL 2500  0.5  200    0        0
+S2     100  12       0         PYRAMIDAL  50    50   2      0        0
+
+[JUNCTIONS]
+;;Name Elev MaxDepth InitDepth SurDepth Aponded
+J1     90   8        0         0        0
+
+[OUTFALLS]
+;;Name Elev Type Gated
+O1     85   FREE NO
+
+[CONDUITS]
+;;Name From To Length Roughness InOffset OutOffset InitFlow MaxFlow
+C1     S1   J1 400    0.013     0        0         0        0
+C2     S2   J1 400    0.013     0        0         0        0
+C3     J1   O1 400    0.013     0        0         0        0
+
+[XSECTIONS]
+;;Link Shape    Geom1 Geom2 Geom3 Geom4 Barrels
+C1     CIRCULAR 1.0   0     0     0     1
+C2     CIRCULAR 1.0   0     0     0     1
+C3     CIRCULAR 2.0   0     0     0     1
+
+[TIMESERIES]
+;;Name Time Value
+Storm  0:00 0.2
+Storm  0:15 0.6
+Storm  0:30 1.8
+Storm  0:45 3.2
+Storm  1:00 2.0
+Storm  1:15 1.0
+Storm  1:30 0.5
+Storm  1:45 0.2
+Storm  2:00 0.0
+
+[REPORT]
+INPUT      NO
+CONTROLS   NO
+SUBCATCHMENTS NONE
+NODES ALL
+LINKS ALL
