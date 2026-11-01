@@ -13,7 +13,9 @@
 //! A slice may carry a NUL terminator; every function stops at the first NUL,
 //! as C would.
 
+#[cfg(not(feature = "memfs"))]
 use std::fs;
+#[cfg(not(feature = "memfs"))]
 use std::io::{Read, Seek, SeekFrom, Write};
 
 // ---------------------------------------------------------------------------
@@ -934,10 +936,17 @@ pub fn strtof(s: &[u8]) -> f32 {
 //  FILE
 // ---------------------------------------------------------------------------
 
+// With the `memfs` feature (hosts with no file system: RustGIS's plugin
+// sandbox), `CFile` and `remove` are the in-memory versions in memfs.rs and
+// the `std::fs` ones below are not compiled.
+#[cfg(feature = "memfs")]
+pub use crate::memfs::{remove, CFile};
+
 /// A C `FILE*` over a `std::fs::File`: one buffer, a position, an
 /// end-of-file flag, and the stdio rules SWMM relies on (`fgets` keeps the
 /// newline; `feof` turns true only after a read hits the end; `rewind`
 /// clears it; a write is buffered until a seek, a read or the close).
+#[cfg(not(feature = "memfs"))]
 pub struct CFile {
     f: fs::File,
     rbuf: Vec<u8>,
@@ -947,8 +956,10 @@ pub struct CFile {
     err: bool,
 }
 
+#[cfg(not(feature = "memfs"))]
 const BUFSZ: usize = 1 << 16;
 
+#[cfg(not(feature = "memfs"))]
 impl CFile {
     /// `fopen`. Modes as SWMM uses them: "r"/"rt"/"rb", "w"/"wt"/"wb",
     /// "r+b", "w+b". Text and binary are the same on POSIX.
@@ -1127,6 +1138,7 @@ impl CFile {
     }
 }
 
+#[cfg(not(feature = "memfs"))]
 impl Drop for CFile {
     fn drop(&mut self) {
         self.flush_write();
@@ -1151,6 +1163,7 @@ pub fn path_of(name: &[u8]) -> Option<std::path::PathBuf> {
 }
 
 /// C `remove`.
+#[cfg(not(feature = "memfs"))]
 pub fn remove(name: &[u8]) -> i32 {
     match path_of(name).map(fs::remove_file) {
         Some(Ok(())) => 0,

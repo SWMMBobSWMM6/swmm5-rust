@@ -1536,7 +1536,8 @@ pub fn getTempFileName(prj: &mut Project, fname: &mut [u8])
     let mut dir: Option<Vec<u8>> = None;
 
     // --- set dir to user's choice of a temporary directory
-    if cio::strlen(&prj.TempDir) > 0 {
+    // (with memfs every file is in memory, so no directory is made)
+    if cio::strlen(&prj.TempDir) > 0 && !cfg!(feature = "memfs") {
         if let Some(p) = cio::path_of(&prj.TempDir) {
             // (as the Windows branch: _mkdir(TempDir) == 0 || errno == EEXIST)
             match std::fs::create_dir(&p) {
@@ -1551,7 +1552,7 @@ pub fn getTempFileName(prj: &mut Project, fname: &mut [u8])
     // (WASI has no system temporary directory, and std::env::temp_dir()
     //  panics there; the file goes in the current directory, as C's
     //  Linux branch puts it.)
-    if dir.is_none() && cfg!(target_os = "wasi") {
+    if dir.is_none() && cfg!(any(target_os = "wasi", feature = "memfs")) {
         dir = Some(Vec::new());
     }
     if dir.is_none() {
@@ -1579,6 +1580,7 @@ pub fn getTempFileName(prj: &mut Project, fname: &mut [u8])
 /// glibc `mkstemp`: replaces the trailing "XXXXXX" of the template with
 /// characters that make a new file name, and creates that file (mode 0600,
 /// O_EXCL). On failure the template is left as it was.
+#[cfg_attr(feature = "memfs", allow(unreachable_code))]
 fn mkstemp(prj: &mut Project, template: &mut [u8]) {
     const LETTERS: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let len = cio::strlen(template);
@@ -1586,12 +1588,17 @@ fn mkstemp(prj: &mut Project, template: &mut [u8]) {
         return;
     }
     if prj.swmm5.TempNameSeed == 0 {
-        let t = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_nanos() as u64)
-            .unwrap_or(0);
+        // (with memfs there is no clock and no process id: the seed is fixed)
+        let t: u64 = if cfg!(feature = "memfs") {
+            0
+        } else {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos() as u64)
+                .unwrap_or(0)
+        };
         // (std::process::id() panics on WASI, which has no process ids)
-        let pid: u64 = if cfg!(target_os = "wasi") { 0 } else { std::process::id() as u64 };
+        let pid: u64 = if cfg!(any(target_os = "wasi", feature = "memfs")) { 0 } else { std::process::id() as u64 };
         prj.swmm5.TempNameSeed = t ^ (pid << 32) ^ 0x9E37_79B9_7F4A_7C15;
     }
     let orig: Vec<u8> = template[len - 6..len].to_vec();
@@ -1606,6 +1613,13 @@ fn mkstemp(prj: &mut Project, template: &mut [u8]) {
             template[len - 6 + k] = LETTERS[(r % 62) as usize];
         }
         prj.swmm5.TempNameSeed = v;
+        #[cfg(feature = "memfs")]
+        {
+            if crate::memfs::create_new(&template[..len]) {
+                return;
+            }
+            continue;
+        }
         let path = match cio::path_of(&template[..len]) {
             Some(p) => p,
             None => break,
@@ -1727,7 +1741,15 @@ fn getAbsolutePath(fname: &[u8], absPath: &mut [u8], size: usize)
 /// symbolic link met on the way is resolved by canonicalizing the prefix).
 /// C writes up to PATH_MAX bytes into the 260-byte InpDir; here the result
 /// is truncated to the buffer.
+#[cfg_attr(feature = "memfs", allow(unreachable_code))]
 fn realpath(fname: &[u8], absPath: &mut [u8]) {
+    // (with memfs there are no directories: a file's name is its whole
+    //  path, so InpDir stays empty and file names pass through unchanged)
+    #[cfg(feature = "memfs")]
+    {
+        let _ = (fname, absPath);
+        return;
+    }
     let p = match cio::path_of(fname) {
         Some(p) => p,
         None => return,

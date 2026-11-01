@@ -9,5 +9,12 @@ license.workspace = true
 name = "swmm5_rust"
 path = "src/lib.rs"
 
+[features]
+# In-memory files, no clock: for hosts with no file system (the RustGIS
+# plugin, wasm32-unknown-unknown). Off by default; the default build is unchanged.
+# Not additive: it replaces disk I/O, so never turn it on for runswmm-rs or the C
+# interface (`--all-features` in this workspace would).
+memfs = []
+
 [dev-dependencies]
 libc = "0.2"

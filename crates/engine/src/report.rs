@@ -78,6 +78,10 @@ fn WRITE(prj: &mut Project, x: &[u8]) {
 
 /// C `time(NULL)`: seconds since the Unix epoch.
 fn c_time() -> i64 {
+    // (a sandbox has no clock: the host sets the time, see memfs::set_clock)
+    #[cfg(feature = "memfs")]
+    return crate::memfs::clock();
+    #[cfg(not(feature = "memfs"))]
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(d) => d.as_secs() as i64,
         Err(_) => 0,

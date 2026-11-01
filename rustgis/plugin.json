@@ -1,0 +1,145 @@
+{
+  "id": "swmm5-rust",
+  "name": "swmm5-rust: SWMM 5 in safe Rust",
+  "version": "0.1.0",
+  "description": "Runs EPA SWMM 5.2.4, translated into safe Rust by swmm5-rust, inside RustGIS's plugin sandbox, and adds the model's subcatchments, links, nodes and rain gages as layers whose attributes are the engine's own summary results. Runs in the desktop app, on the command line and in the web app.",
+  "author": "Robert Dickinson (SWMM Enablement), with Claude",
+  "homepage": "https://github.com/SWMMBobSWMM6/swmm5-rust",
+  "license": "MIT",
+  "entry": "plugin.wasm",
+  "abi": 1,
+  "minRustgisVersion": "0.5.0",
+  "permissions": [
+    "files"
+  ],
+  "commands": [
+    {
+      "id": "about",
+      "label": "About\nEngine",
+      "help": "Which SWMM engine and build this plugin carries.",
+      "icon": "help",
+      "params": "{}"
+    }
+  ],
+  "tools": [
+    {
+      "id": "run-swmm",
+      "name": "Run SWMM 5 Model",
+      "summary": "Runs a SWMM 5 .inp file with swmm5-rust and adds its network as layers with the run's summary results.",
+      "toolbox": "SWMM 5",
+      "params": [
+        {
+          "name": "model",
+          "label": "SWMM 5 input file",
+          "kind": "file",
+          "required": true,
+          "extensions": [
+            "inp"
+          ],
+          "help": "The model's .inp file. Files it names (rainfall, inflows, hotstart) go in the data file boxes below; inside the sandbox nothing else can be read."
+        },
+        {
+          "name": "epsg",
+          "label": "Model coordinate system (EPSG code)",
+          "kind": "text",
+          "default": "",
+          "help": "The EPSG code of the model's map coordinates, such as 3435 (NAD83 / Illinois East, US feet). RustGIS reprojects the layers if it knows the code; if not, it says so and reads them as longitude/latitude. Esri's six-digit codes (102xxx) are not EPSG codes. Blank: [MAP] UNITS Degrees is read as longitude/latitude, anything else is drawn at true size around the point below."
+        },
+        {
+          "name": "anchor_lon",
+          "label": "Local frame: center longitude",
+          "kind": "number",
+          "default": -82.3474,
+          "help": "Where to draw a model that has no real coordinates."
+        },
+        {
+          "name": "anchor_lat",
+          "label": "Local frame: center latitude",
+          "kind": "number",
+          "default": 29.6476,
+          "help": "Where to draw a model that has no real coordinates."
+        },
+        {
+          "name": "data1",
+          "label": "Data file the model names (1)",
+          "kind": "file",
+          "required": false,
+          "help": "A rainfall, inflow, hotstart or other file the .inp names. It is found by its own name (in any case), whatever folder the .inp gives; the run's messages say which file stood in for which name."
+        },
+        {
+          "name": "data2",
+          "label": "Data file the model names (2)",
+          "kind": "file",
+          "required": false,
+          "help": "A rainfall, inflow, hotstart or other file the .inp names. It is found by its own name (in any case), whatever folder the .inp gives; the run's messages say which file stood in for which name."
+        },
+        {
+          "name": "data3",
+          "label": "Data file the model names (3)",
+          "kind": "file",
+          "required": false,
+          "help": "A rainfall, inflow, hotstart or other file the .inp names. It is found by its own name (in any case), whatever folder the .inp gives; the run's messages say which file stood in for which name."
+        },
+        {
+          "name": "report",
+          "label": "Add the report (.rpt) as a table",
+          "kind": "bool",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "map-swmm",
+      "name": "Map SWMM 5 Model",
+      "summary": "Adds a SWMM 5 .inp file's network as layers with its input attributes, without running it.",
+      "toolbox": "SWMM 5",
+      "params": [
+        {
+          "name": "model",
+          "label": "SWMM 5 input file",
+          "kind": "file",
+          "required": true,
+          "extensions": [
+            "inp"
+          ]
+        },
+        {
+          "name": "epsg",
+          "label": "Model coordinate system (EPSG code)",
+          "kind": "text",
+          "default": ""
+        },
+        {
+          "name": "anchor_lon",
+          "label": "Local frame: center longitude",
+          "kind": "number",
+          "default": -82.3474
+        },
+        {
+          "name": "anchor_lat",
+          "label": "Local frame: center latitude",
+          "kind": "number",
+          "default": 29.6476
+        }
+      ]
+    }
+  ],
+  "tab": {
+    "label": "SWMM5 Rust",
+    "groups": [
+      {
+        "label": "Model",
+        "items": [
+          "tool:run-swmm",
+          "tool:map-swmm"
+        ]
+      },
+      {
+        "label": "Engine",
+        "items": [
+          "about"
+        ]
+      }
+    ]
+  }
+}

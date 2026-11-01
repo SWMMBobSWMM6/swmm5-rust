@@ -1,0 +1,35 @@
+[package]
+name = "swmm5-rust-rustgis"
+version = "0.1.0"
+description = "swmm5-rust as a RustGIS WebAssembly plugin: EPA SWMM 5.2.4 in safe Rust, run inside RustGIS's plugin sandbox (desktop, command line and web app)"
+edition = "2024"
+license = "MIT"
+publish = false
+
+# Its own workspace: building the plugin never touches the engine workspace's lock or profiles.
+[workspace]
+
+[lib]
+name = "swmm5_rust_rustgis"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "plugin-native"
+path = "src/bin/plugin_native.rs"
+
+[dependencies]
+rustgis-plugin = { git = "https://github.com/opengeos/rustgis-plugins", rev = "24e323c58ee17679fc3d393250cd1c839e654bb1" }
+swmm5-rust = { path = "../crates/engine", features = ["memfs"] }
+# preserve_order: attribute tables list fields in the order the plugin writes them.
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = { version = "0.10", default-features = false }
+
+# A panic aborts: RustGIS reports it as the plugin failing. Optimised for speed, not size:
+# RustGIS interprets the module (wasmi) with a fuel budget per call, so fewer instructions
+# means bigger models fit.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

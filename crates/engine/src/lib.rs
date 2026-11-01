@@ -13,6 +13,8 @@
 
 pub mod ccast;
 pub mod cio;
+#[cfg(feature = "memfs")]
+pub mod memfs;
 pub mod consts;
 pub mod enums;
 pub mod globals;
