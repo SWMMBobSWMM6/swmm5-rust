@@ -1,0 +1,375 @@
+<title>swmm5-rust in RustGIS</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="color-scheme" content="dark light">
+<meta name="bore-shell" content="1.0.0">
+<script>try{var p=localStorage.getItem('swmm5rust_rustgis_theme');document.documentElement.setAttribute('data-theme',p==='light'?'light':'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a GIS workbench. Header lockup + tabs; the Map tab is tool form and layers on the
+   left, the map over its attribute table on the right; other tabs are a single reading column.
+   Dark first (Bob's standing default); light is the alternative. Rust = the RustGIS side,
+   water = the SWMM side. */
+:root{
+  color-scheme: dark;
+  --font-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --bg:#0b1220; --card:#131c2e; --field:#1a2438; --line:#2a3752; --line-soft:#212c42;
+  --ink:#dbe4f0; --ink-dim:#94a3b8; --ink-faint:#8b9bb5; --ink-strong:#f1f5f9; --head:#dbe7f7;
+  --row-hover:#1a2438; --shadow:rgba(0,0,0,.45);
+  --headerbg:#0d1830; --onheader:#eaf2ff; --headersub:#b9cbe4; --btn-dark:#2f4f7a; --tab-on:#60a5fa;
+  --panel:#152238; --panel-line:#2b3d5c; --panel-ink:#c3d7f3;
+  --hi-bg:#2a1c0f; --hi-line:#7c4a1d; --hi-ink:#fdba74;
+  --warn-bg:#2a1416; --warn-line:#7f2b32; --warn-ink:#fca5a5;
+  --ok-bg:#0f2318; --ok-line:#245c39; --ok-ink:#86efac;
+  --code-bg:#070d18; --code-ink:#dbe4f0;
+  --accent:#60a5fa; --rust:#f0905a; --water:#5ec8e5;
+  --r:12px; --gap:16px;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  color-scheme: light;
+  --bg:#f6f7f9; --card:#ffffff; --field:#ffffff; --line:#e3e6ea; --line-soft:#eef0f3;
+  --ink:#374151; --ink-dim:#5b6472; --ink-faint:#6b7280; --ink-strong:#111827; --head:#1e3a5f;
+  --row-hover:#f6f8fb; --shadow:rgba(0,0,0,.06);
+  --headerbg:#1e3a5f; --onheader:#ffffff; --headersub:#c7d7ea; --btn-dark:#2b5580; --tab-on:#60a5fa;
+  --panel:#eff6ff; --panel-line:#dbeafe; --panel-ink:#1e3a5f;
+  --hi-bg:#fff7ed; --hi-line:#fed7aa; --hi-ink:#c2410c;
+  --warn-bg:#fef2f2; --warn-line:#fecaca; --warn-ink:#991b1b;
+  --ok-bg:#f0fdf4; --ok-line:#bbf7d0; --ok-ink:#166534;
+  --code-bg:#0f172a; --code-ink:#e2e8f0;
+  --accent:#2563eb; --rust:#b84a2c; --water:#0e7490;
+}}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --bg:#f6f7f9; --card:#ffffff; --field:#ffffff; --line:#e3e6ea; --line-soft:#eef0f3;
+  --ink:#374151; --ink-dim:#5b6472; --ink-faint:#6b7280; --ink-strong:#111827; --head:#1e3a5f;
+  --row-hover:#f6f8fb; --shadow:rgba(0,0,0,.06);
+  --headerbg:#1e3a5f; --onheader:#ffffff; --headersub:#c7d7ea; --btn-dark:#2b5580; --tab-on:#60a5fa;
+  --panel:#eff6ff; --panel-line:#dbeafe; --panel-ink:#1e3a5f;
+  --hi-bg:#fff7ed; --hi-line:#fed7aa; --hi-ink:#c2410c;
+  --warn-bg:#fef2f2; --warn-line:#fecaca; --warn-ink:#991b1b;
+  --ok-bg:#f0fdf4; --ok-line:#bbf7d0; --ok-ink:#166534;
+  --code-bg:#0f172a; --code-ink:#e2e8f0;
+  --accent:#2563eb; --rust:#b84a2c; --water:#0e7490;
+}
+:root[data-theme="dark"]{ color-scheme: dark; }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--headerbg)}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+code,.mono{font-family:var(--font-mono);font-size:13px}
+h1,h2,h3{font-family:var(--font-display);color:var(--head);text-wrap:balance;margin:0}
+/* header */
+header{background:var(--headerbg);color:var(--onheader);position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+.hrow{display:flex;align-items:center;gap:var(--gap);padding-block:12px;flex-wrap:wrap}
+.lock{display:flex;align-items:center;gap:12px;min-width:0}
+.lock h1{color:var(--onheader);font-size:26px;font-weight:700;letter-spacing:.2px;line-height:1.1}
+.lock .sub{color:var(--headersub);font-size:13px}
+.pill{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--headersub);color:var(--headersub);white-space:nowrap}
+.cluster{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--btn-dark);border-radius:8px;overflow:hidden}
+.seg button{background:transparent;border:0;color:var(--headersub);padding:4px 10px;font-size:13px;cursor:pointer}
+.seg button.on{background:var(--btn-dark);color:var(--onheader)}
+.hbtn{background:var(--btn-dark);color:var(--onheader);border:0;border-radius:8px;padding:5px 12px;font-size:13px;cursor:pointer}
+.hbtn:hover{filter:brightness(1.15)}
+.tabs{display:flex;gap:4px;overflow-x:auto}
+.tabs button{background:transparent;border:0;border-bottom:3px solid transparent;color:var(--headersub);padding:8px 14px;font-family:var(--font-display);font-size:15px;font-weight:600;letter-spacing:.4px;cursor:pointer;white-space:nowrap}
+.tabs button.on{color:var(--onheader);border-bottom-color:var(--tab-on)}
+main{padding-block:var(--gap)}
+@media (max-width:700px){header{position:static}}
+.view[hidden]{display:none!important}
+/* boxes: panel / hi / warn / ok only */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px;box-shadow:0 1px 2px var(--shadow);min-width:0}
+.box{border-radius:var(--r);padding:12px 16px;border:1px solid;font-size:13px}
+.box.panel{background:var(--panel);border-color:var(--panel-line);color:var(--panel-ink)}
+.box.hi{background:var(--hi-bg);border-color:var(--hi-line);color:var(--hi-ink)}
+.box.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+.box.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+.label{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+.btn{border:1px solid var(--line);background:var(--field);border-radius:8px;padding:7px 14px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.run{background:var(--rust);border-color:var(--rust);color:var(--bg);font-weight:600}
+.btn.run:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.55;cursor:wait}
+/* map tab */
+.work{display:grid;grid-template-columns:minmax(280px,1fr) 2.6fr;gap:var(--gap);align-items:start}
+@media (max-width:900px){.work{grid-template-columns:1fr}}
+.side{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
+.form{display:grid;gap:10px}
+.form label{display:grid;gap:4px;font-size:13px;color:var(--ink-dim)}
+.form input[type=text],.form input[type=number],.form select{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:6px 10px;width:100%;min-width:0}
+.form .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk{display:flex!important;grid-template-columns:none!important;align-items:center;gap:8px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.toolhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.toolhead h2{font-size:20px}
+.tid{font-family:var(--font-mono);font-size:11px;color:var(--rust)}
+.layers{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.layers li{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.layers li.active{border-color:var(--accent);background:var(--row-hover)}
+.layers .n{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint)}
+.layers .sym{grid-column:2/4;display:flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-dim)}
+.layers .sym select{background:var(--field);border:1px solid var(--line);border-radius:6px;padding:2px 6px;font-size:12px;max-width:100%;min-width:0}
+.msgs{font-family:var(--font-mono);font-size:11.5px;line-height:1.45;margin:0;padding:0;list-style:none;display:grid;gap:4px;max-height:260px;overflow:auto;word-break:break-word}
+.msgs li{border-left:2px solid var(--line);padding-left:8px;color:var(--ink-dim)}
+.mapwrap{position:relative;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--card)}
+#map{display:block;width:100%;height:min(62vh,560px);min-height:340px;touch-action:none;cursor:grab}
+.maptools{position:absolute;top:calc(10px);right:10px;display:flex;flex-direction:column;gap:6px}
+.maptools button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:600}
+.legend{position:absolute;left:10px;bottom:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11.5px;max-width:min(320px,70%);opacity:.96}
+.legend .ttl{font-weight:600;color:var(--ink-strong);margin-bottom:4px}
+.legend .item{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px}
+.legend .sw{width:14px;height:10px;border-radius:2px;flex:0 0 auto}
+.runline{position:absolute;left:10px;top:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:12px;max-width:calc(100% - 70px)}
+.tablewrap{margin-top:var(--gap);min-width:0}
+.tablebar{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px}
+.scroll{overflow:auto;max-height:340px;border:1px solid var(--line);border-radius:var(--r)}
+table.attr{border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;width:max-content;min-width:100%}
+table.attr th,table.attr td{padding:5px 10px;border-bottom:1px solid var(--line-soft);text-align:right;white-space:nowrap}
+table.attr th{position:sticky;top:0;background:var(--field);color:var(--ink-strong);font-weight:600;cursor:pointer;font-size:12px}
+table.attr td.t,table.attr th.t{text-align:left}
+table.attr tr:hover td{background:var(--row-hover)}
+table.attr tr.sel td{background:var(--panel);color:var(--panel-ink)}
+/* reading tabs */
+.col{max-width:1080px;margin:0 auto;display:grid;gap:var(--gap);grid-template-columns:minmax(0,1fr)}
+#gates{grid-template-columns:minmax(0,1fr)}
+.col2{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+@media (max-width:900px){.col2{grid-template-columns:1fr}}
+pre.code{background:var(--code-bg);color:var(--code-ink);border-radius:var(--r);padding:12px 14px;overflow:auto;font-family:var(--font-mono);font-size:12px;line-height:1.5;margin:0;max-height:420px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+.kv div:nth-child(odd){color:var(--ink-faint)}
+.kv .mono{word-break:break-all}
+.stat{display:flex;gap:var(--gap);flex-wrap:wrap}
+.stat .s{flex:1 1 160px;min-width:0}
+.stat .v{font-family:var(--font-display);font-size:26px;font-weight:700;color:var(--ink-strong);line-height:1.1}
+.stat .d{font-size:12px;color:var(--ink-dim)}
+.chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid}
+.chip.ok{background:var(--ok-bg);color:var(--ok-ink);border-color:var(--ok-line)}
+.chip.warn{background:var(--warn-bg);color:var(--warn-ink);border-color:var(--warn-line)}
+.chip.hi{background:var(--hi-bg);color:var(--hi-ink);border-color:var(--hi-line)}
+.chip.panel{background:var(--panel);color:var(--panel-ink);border-color:var(--panel-line)}
+table.plain{border-collapse:collapse;font-size:13px;width:100%;font-variant-numeric:tabular-nums}
+table.plain th,table.plain td{padding:6px 10px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:top}
+table.plain th{color:var(--ink-strong);font-weight:600;font-size:12px}
+table.plain td.r,table.plain th.r{text-align:right}
+.fig{margin:0;display:grid;gap:6px}
+.fig .svgbox{overflow-x:auto}
+.fig figcaption{font-size:12.5px;color:var(--ink-dim)}
+.essay{max-width:72ch;margin:0 auto;font-size:16px;line-height:1.65}
+.essay h2{font-size:28px;margin-top:28px;margin-bottom:6px}
+.essay h3{font-size:20px;margin-top:20px}
+.essay p{margin:10px 0}
+.essay .lede{font-size:18px;color:var(--ink-strong)}
+.essay pre.code{max-height:none}
+.essay .fig{margin:18px 0}
+.toc{max-width:72ch;margin:10px auto 0;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.toc a{color:var(--accent);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.foot{border-top:1px solid var(--line);margin-top:28px;padding-block:14px;font-size:12px;color:var(--ink-faint);display:grid;gap:4px}
+/* modal + tour */
+.modal{position:fixed;inset:0;background:rgba(3,8,18,.62);display:grid;place-items:center;z-index:50;padding:16px}
+.modal .card{max-width:620px;width:100%;max-height:86vh;overflow:auto}
+.modal ol{padding-left:20px;margin:8px 0}
+.tourbox{position:fixed;z-index:60;max-width:340px;background:var(--card);border:1px solid var(--accent);border-radius:var(--r);padding:12px 14px;box-shadow:0 8px 30px var(--shadow)}
+.tourbox h3{font-size:18px;margin-bottom:4px}
+.tourring{position:fixed;z-index:55;border:2px solid var(--accent);border-radius:10px;pointer-events:none;box-shadow:0 0 0 9999px rgba(3,8,18,.45)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink-strong);color:var(--bg);padding:8px 14px;border-radius:10px;font-size:13px;z-index:70;max-width:90vw}
+.menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:6px;display:grid;min-width:240px;z-index:30;box-shadow:0 8px 30px var(--shadow)}
+.menu button{background:transparent;border:0;text-align:left;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+.menu button:hover{background:var(--row-hover)}
+.rel{position:relative}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--ink-faint);border-top-color:transparent;border-radius:50%;animation:sp 0.9s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.btn.small{padding:3px 10px;font-size:12px}
+/* run summary, badges */
+.runsum{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;display:grid;gap:6px;min-width:0}
+.sumhead{font-size:13.5px;color:var(--ink-strong);overflow-wrap:anywhere}
+.sumhead .mono{font-size:11.5px;color:var(--ink-faint)}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.badges .chip{font-size:11.5px;padding:2px 9px}
+.linkchip{cursor:pointer;font:inherit;font-size:11.5px;font-weight:600}
+.facts{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--ink)}
+.facts .k{color:var(--ink-faint)}
+.findbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.findbar input{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-width:0;flex:1 1 220px}
+.findbar .hint{font-size:11.5px;color:var(--ink-faint)}
+/* time series */
+.tsrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;min-width:0}
+.tsvar{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-dim)}
+.tsvar select{background:var(--field);border:1px solid var(--line);border-radius:6px;padding:2px 6px;font-size:12px;max-width:100%;min-width:0}
+#tscard{margin-top:var(--gap)}
+.tablebar input{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:5px 10px;min-width:0;width:200px;max-width:100%}
+table.attr tbody td{height:28px;padding-top:0;padding-bottom:0}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}
+</style>
+
+<header>
+  <div class="gutter">
+    <div class="hrow">
+      <div class="lock">
+        <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="var(--rust)" stroke-width="3" stroke-dasharray="6 3.4"/><path d="M8 19c3-4 6 4 9 0s6 4 9 0" fill="none" stroke="var(--water)" stroke-width="2.6" stroke-linecap="round"/></svg>
+        <div>
+          <h1>swmm5-rust in RustGIS</h1>
+          <div class="sub">EPA SWMM 5.2.4 in safe Rust, running as a sandboxed RustGIS plugin <span class="pill" id="verpill">plugin 0.1.0 · ABI 1</span></div>
+        </div>
+      </div>
+      <div class="cluster">
+        <div class="seg" id="theme-toggle" role="group" aria-label="Color theme"><button data-t="dark" class="on">Dark</button><button data-t="light">Light</button><button data-t="auto">Auto</button></div>
+        <button class="hbtn" id="helpbtn" aria-label="How to use">?</button>
+        <button class="hbtn" id="gifbtn">Make a GIF</button>
+        <div class="rel"><button class="hbtn" id="exportbtn" aria-haspopup="true" aria-expanded="false" aria-controls="exportmenu">Export ▾</button>
+          <div class="menu" id="exportmenu" role="menu" hidden>
+            <button data-x="plugin">The RustGIS plugin (.rgplugin)</button>
+            <button data-x="csv">Active layer table (.csv)</button>
+            <button data-x="geojson">All layers for RustGIS (.zip of GeoJSON)</button>
+            <button data-x="inp">The model (.inp)</button>
+            <button data-x="rpt">The report (.rpt, as text)</button>
+            <button data-x="docx">The Doc tab essay (.docx)</button>
+            <button data-x="bundle">This run, complete (.zip: inputs, outputs, hashes, checks)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Views">
+      <button data-v="map" class="on" role="tab" aria-selected="true" aria-controls="v-map" id="t-map">Map</button><button data-v="plugin" role="tab" aria-selected="false" aria-controls="v-plugin" id="t-plugin" tabindex="-1">Plugin</button><button data-v="verify" role="tab" aria-selected="false" aria-controls="v-verify" id="t-verify" tabindex="-1">Verify</button><button data-v="about" role="tab" aria-selected="false" aria-controls="v-about" id="t-about" tabindex="-1">About</button><button data-v="doc" role="tab" aria-selected="false" aria-controls="v-doc" id="t-doc" tabindex="-1">Doc</button>
+    </nav>
+  </div>
+</header>
+
+<main class="gutter">
+  <!-- MAP -->
+  <section class="view" id="v-map" role="tabpanel" aria-labelledby="t-map">
+    <div class="work">
+      <div class="side">
+        <div class="card" id="toolcard">
+          <div class="toolhead"><h2>Run SWMM 5 Model</h2><span class="tid">plugin:swmm5-rust/run-swmm</span></div>
+          <p style="margin:6px 0 12px;font-size:13px;color:var(--ink-dim)">The same form RustGIS shows in its Tools pane, sent to the same plugin module through the same three-function interface.</p>
+          <div class="form">
+            <label for="demo">SWMM 5 input file
+              <select id="demo"></select>
+            </label>
+            <label class="chk" for="file"><input type="file" id="file" accept=".inp" style="max-width:100%"></label>
+            <label for="epsg">Model coordinate system (EPSG code)
+              <input type="text" id="epsg" placeholder="blank: local frame or [MAP] UNITS Degrees" autocomplete="off">
+            </label>
+            <div class="row2">
+              <label for="alon">Center longitude<input type="number" id="alon" step="0.0001" value="-82.3474"></label>
+              <label for="alat">Center latitude<input type="number" id="alat" step="0.0001" value="29.6476"></label>
+            </div>
+            <label for="datafiles">Data files the model names (up to 3: rainfall, inflows, hotstart)
+              <input type="file" id="datafiles" multiple style="max-width:100%">
+            </label>
+            <div id="datalist" class="mono" style="font-size:11.5px;color:var(--ink-faint);overflow-wrap:anywhere"></div>
+            <label class="chk" for="report"><input type="checkbox" id="report"> Add the report (.rpt) as a table</label>
+            <div class="btns"><button class="btn run" id="runbtn">Run SWMM 5 Model</button><button class="btn" id="mapbtn">Map only</button></div>
+            <div id="fuelnote" class="box panel" hidden></div>
+          </div>
+        </div>
+        <div class="card" id="layercard">
+          <div class="label">Layers</div>
+          <ul class="layers" id="layers" style="margin-top:8px"></ul>
+        </div>
+        <div class="card" id="msgcard">
+          <div class="label">Geoprocessing messages</div>
+          <ul class="msgs" id="msgs" style="margin-top:8px"></ul>
+        </div>
+      </div>
+      <div style="min-width:0">
+        <div class="runsum" id="runsum" hidden aria-live="polite"></div>
+        <div class="findbar"><input type="search" id="find" list="findlist" placeholder="Find a node, link or subcatchment by ID" aria-label="Find a feature by ID" autocomplete="off"><datalist id="findlist"></datalist><span class="hint">Enter to select and zoom</span></div>
+        <div class="mapwrap" id="mapwrap">
+          <canvas id="map" tabindex="0" aria-label="Map of the model's layers. Arrow keys pan, plus and minus zoom, 0 fits the model, Z zooms to the selected feature."></canvas>
+          <div class="runline" id="runline">Loading…</div>
+          <div class="maptools"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Zoom to the model">⤢</button><button id="zsel" aria-label="Zoom to the selected feature">◎</button></div>
+          <div class="legend" id="legend" hidden></div>
+        </div>
+        <div class="card" id="tscard" hidden><div class="toolhead"><h2 style="font-size:20px">Time series</h2><span class="label">hydrographs and the time slider</span></div><div id="tsbody" style="margin-top:8px"></div></div>
+        <div class="tablewrap">
+          <div class="tablebar"><div><span class="label">Attribute table</span> <span id="tabname" style="font-weight:600;color:var(--ink-strong)"></span> <span id="tabcount" class="mono" style="color:var(--ink-faint)"></span></div><div class="btns"><input type="search" id="tabfilter" placeholder="Filter rows" aria-label="Filter the table's rows"><button class="btn" id="csvbtn">Export CSV</button></div></div>
+          <div class="scroll" id="tablescroll" tabindex="0" aria-label="Attribute table. Up and down arrows move the selection; Enter zooms to it."><table class="attr" id="attr"></table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLUGIN -->
+  <section class="view" id="v-plugin" role="tabpanel" aria-labelledby="t-plugin" hidden>
+    <div class="col">
+      <div class="card"><h2 style="font-size:24px">The plugin and the wire it talks on</h2>
+        <p style="margin:8px 0 0">RustGIS loads a plugin as a WebAssembly module with exactly three functions to call (<code>call</code>, <code>result</code>, <code>log</code>), no files, no clock and a fuel budget. This page plays RustGIS's side of that interface in JavaScript, so what runs here is the module RustGIS runs, byte for byte.</p>
+      </div>
+      <figure class="card fig"><div class="svgbox" id="fig-abi"></div><figcaption>RustGIS ABI 1 as this plugin uses it. The module imports RustGIS’s <code>call</code>, <code>result</code> and <code>log</code> and nothing else. A tool makes no host requests, so everything it needs arrives in one JSON request; it logs only when the engine stops at a bad index.</figcaption></figure>
+      <div class="col2">
+        <div class="card"><div class="label">Last request (RustGIS → plugin)</div><pre class="code" id="reqjson" style="margin-top:8px">Run a model first.</pre></div>
+        <div class="card"><div class="label">Last reply (plugin → RustGIS)</div><pre class="code" id="repjson" style="margin-top:8px">Run a model first.</pre></div>
+      </div>
+      <div class="card"><div class="toolhead"><h2 style="font-size:22px">Install it in RustGIS</h2><button class="btn run" id="getplugin">Get swmm5-rust-0.1.0.rgplugin</button></div>
+        <div id="pluginfacts" class="kv" style="margin-top:12px"></div>
+        <ol style="margin:12px 0 0;padding-left:20px;display:grid;gap:6px">
+          <li><b>Web app.</b> Open <a href="https://web.rustgis.app" target="_blank" rel="noopener">web.rustgis.app</a>, start from the World Atlas sample (a tool needs at least one layer on the map), then drag the .rgplugin onto the map or use <b>Plugins › Plugin Manager › Install from a file</b>. A <b>SWMM5 Rust</b> tab appears.</li>
+          <li><b>Desktop app.</b> The same Plugin Manager, or drop the file on the window.</li>
+          <li><b>Command line.</b> <code id="clicmd" class="mono" style="word-break:break-all"></code></li>
+        </ol>
+        <div class="box hi" style="margin-top:12px" id="dlnote">Inside a Claude artifact the viewer only saves files with listed extensions, so the package is offered as <b>swmm5-rust-0.1.0.rgplugin.zip</b>: remove <b>.zip</b> from the name before installing. Opened from a web server or your disk, the button saves the .rgplugin directly.</div>
+      </div>
+      <div class="card"><div class="label">plugin.json</div><pre class="code" id="manifest" style="margin-top:8px"></pre></div>
+    </div>
+  </section>
+
+  <!-- VERIFY -->
+  <section class="view" id="v-verify" role="tabpanel" aria-labelledby="t-verify" hidden>
+    <div class="col">
+      <div class="card">
+        <div class="toolhead"><h2 style="font-size:24px">Check this run against EPA SWMM 5.2.4</h2><button class="btn run" id="verifybtn">Run EPA 5.2.4 on the same model</button></div>
+        <p style="margin:8px 0 0">Runs EPA's own C engine, compiled to WebAssembly with wasi-libc (the binary the swmm5-rust app ships), on the model now on the map, then compares its files with the plugin's and reads EPA's report independently to check every attribute in the layers.</p>
+        <div id="verifyout" style="margin-top:12px"></div>
+      </div>
+      <div class="card"><h2 style="font-size:22px">What was checked before this page was built</h2><div id="gates" style="margin-top:10px;display:grid;gap:var(--gap)"></div></div>
+    </div>
+  </section>
+
+  <!-- DOC -->
+  <section class="view" id="v-doc" role="tabpanel" aria-labelledby="t-doc" hidden>
+    <div class="col"><div class="card"><div class="toolhead"><span class="label">The Doc · the same essay ships as swmm5-rust-in-rustgis.docx</span><button class="btn" id="docxbtn">Get the .docx</button></div><nav class="toc" id="toc" aria-label="Contents"></nav><article class="essay" id="essay"></article></div></div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="view" id="v-about" role="tabpanel" aria-labelledby="t-about" hidden>
+    <div class="col" id="about"></div>
+  </section>
+
+  <div class="foot" id="foot"></div>
+</main>
+
+<div class="modal" id="help" hidden><div class="card" role="dialog" aria-modal="true" aria-labelledby="helpttl">
+  <h2 id="helpttl" style="font-size:24px">How to use this page</h2>
+  <p style="margin:8px 0">This page runs <b>swmm5-rust</b>, EPA SWMM 5.2.4 translated into safe Rust, as the RustGIS plugin it was built to be. The module that runs here is the one inside the .rgplugin package.</p>
+  <ol>
+    <li><b>Pick a model</b> or open your own .inp file.</li>
+    <li><b>Run SWMM 5 Model</b> runs it and draws the subcatchments, links, nodes and rain gages with the run's results as attributes. <b>Map only</b> skips the run.</li>
+    <li><b>Click a layer</b> to fill the attribute table; pick a field to color the map by it. Click a feature (or find it by ID) to select it everywhere.</li>
+    <li><b>Time series</b> under the map: the selected object's hydrograph, and a time slider that colors the map by any moment of the run.</li>
+    <li><b>Verify</b> runs EPA's own engine on the same model and compares the files byte for byte.</li>
+    <li><b>Plugin</b> shows the request and reply that crossed the interface, and how to install the plugin in RustGIS.</li>
+  </ol>
+  <div class="btns" style="margin-top:12px"><button class="btn run" id="tourbtn">Take the tour</button><button class="btn" id="helpclose">Start working</button></div>
+</div></div>
+<div class="tourring" id="tourring" hidden></div>
+<div class="tourbox" id="tourbox" role="dialog" aria-labelledby="tourttl" hidden><h3 id="tourttl"></h3><div id="tourtxt" style="font-size:13.5px"></div><div class="btns" style="margin-top:10px;justify-content:space-between"><span class="mono" id="tourn" style="font-size:11px;color:var(--ink-faint)"></span><span class="btns"><button class="btn" id="tourskip">Close</button><button class="btn run" id="tournext">Next</button></span></div></div>
+
+<script type="application/octet-stream" id="b64-plugin">/*__PLUGIN_WASM__*/</script>
+<script type="application/octet-stream" id="b64-epa">/*__EPA_WASM__*/</script>
+<script type="application/octet-stream" id="b64-rgplugin">/*__RGPLUGIN__*/</script>
+<script type="application/octet-stream" id="b64-docx">/*__DOCX__*/</script>
+<script type="text/plain" id="src-core">/*__ENGINE_CORE__*/</script>
+<script>/*__CMP_JS__*/</script>
+<script>/*__VERIFY_JS__*/</script>
+<script>window.APP = /*__DATA__*/;</script>
+<script>
+/*__APP_JS__*/
+</script>

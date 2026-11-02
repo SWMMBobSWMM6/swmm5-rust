@@ -65,7 +65,7 @@ The package is attached to the release `rustgis-plugin-v0.1.0` of this repositor
 
 ## The page and the write-up
 
-* `app/swmm5-rust-rustgis.html`: one self-contained page that runs the same `plugin.wasm` through a JavaScript implementation of RustGIS's plugin interface, checks it against EPA SWMM 5.2.4 for WebAssembly, and offers the .rgplugin, CSV and GeoJSON for download. Its Doc tab is the write-up.
+* `app/swmm5-rust-rustgis.html` (page 1.1): one self-contained page that runs the same `plugin.wasm` through a JavaScript implementation of RustGIS's plugin interface. Verify runs EPA SWMM 5.2.4 for WebAssembly on the run's frozen input bundle (data files included), compares the files byte for byte, and checks every attribute field by field, with a planted-defect self-test. Hydrographs and a time slider read the output file of that EPA run, tied to the plugin's own output by SHA-256. It also exports the .rgplugin, CSV, GeoJSON and a complete run bundle (.zip). Its Doc tab is the write-up. Sources and tests: `app/src/`.
 * `doc/swmm5-rust-in-rustgis.docx`: the same write-up as a Word document, with the review's defect register and the measurements.
 
 ## AI use
