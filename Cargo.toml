@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
-members = ["crates/c2rust-baseline", "crates/engine", "crates/difftest", "crates/cli", "crates/capi"]
+members = ["crates/c2rust-baseline", "crates/engine", "crates/difftest", "crates/cli", "crates/capi", "crates/outfile", "crates/gpkg"]
+# swmm5-gpkg pulls in terrio; leave it out of a plain `cargo build` so the engine builds as before.
+default-members = ["crates/c2rust-baseline", "crates/engine", "crates/difftest", "crates/cli", "crates/capi", "crates/outfile"]
 
 [workspace.package]
 version = "0.1.0"

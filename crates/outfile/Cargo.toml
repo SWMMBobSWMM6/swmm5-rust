@@ -1,0 +1,18 @@
+[package]
+name = "swmm-out"
+description = "Reader for the binary results (.out) file of EPA SWMM 5 and engines that write its layout: names, properties, variables, time series and peaks. No dependencies, no unsafe code."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "swmm_out"
+path = "src/lib.rs"
+
+[[bin]]
+name = "swmmout"
+path = "src/bin/swmmout.rs"
+
+[dev-dependencies]
+# Tests only: the engine makes a real .out for the reader to read. The reader itself depends on nothing.
+swmm5-rust = { path = "../engine" }

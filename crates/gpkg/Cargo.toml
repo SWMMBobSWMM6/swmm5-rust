@@ -1,0 +1,20 @@
+[package]
+name = "swmm5-gpkg"
+description = "Run a SWMM 5 model with swmm5-rust and write its nodes, links and subcatchments, with results, to a GeoPackage through terrio (pure Rust, no GDAL)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version = "1.90"
+
+[lib]
+name = "swmm5_gpkg"
+path = "src/lib.rs"
+
+[[bin]]
+name = "swmm5-gpkg"
+path = "src/main.rs"
+
+[dependencies]
+swmm-out = { path = "../outfile" }
+swmm5-rust = { path = "../engine" }
+terrio = { version = "0.9", default-features = false, features = ["sqlite"] }
