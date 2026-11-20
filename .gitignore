@@ -9,3 +9,6 @@ app/node_modules/
 __pycache__/
 results/profile_work/*.out
 results/profile_work/*.rpt
+
+# real OpenSWMM 6 output kept as a test fixture (no OpenSWMM 6 engine is built here)
+!crates/outfile/tests/data/*.out

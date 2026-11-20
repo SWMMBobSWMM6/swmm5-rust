@@ -1,0 +1,281 @@
+Checks of crates/outfile (swmm-out) and crates/gpkg (swmm5-gpkg), run 19 November 2026.
+Engine: swmm5-rust at commit c2af2d3 plus these two crates. rustc 1.97.0, terrio 0.9.0,
+swmm-toolkit 0.17.0, GDAL 3.12.4 through pyogrio, RustGIS 0.7.0 (PyPI). Models from SWMMBobSWMM6/1729-SWMM5-Models-2030 and tests/models.
+Greenville_US_nofiles.inp is Greenville/Greenville_all_SWMM5_Features.inp with its three SAVE lines in [FILES] commented out
+(they name files on a Windows desktop).
+
+=== cargo test --release -p swmm-out -p swmm5-gpkg
+test tests::dates_decode ... ok
+test tests::refuses_what_is_not_an_output_file ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test values_the_input_file_fixes ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test inpmap::tests::reads_the_map_sections ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test results_of_another_model_are_refused ... ok
+test without_an_epsg_no_reference_system_is_claimed ... ok
+test the_geopackage_is_valid_and_holds_the_model ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+=== tools/check_outfile.py target/release/swmmout RUNS SWMM-RUN-RECORD
+Example1_reg.out                               A toolkit:     82080 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical | C rpt tables: 48960 numbers agree, stamps agree, worst 0.50 of a last digit (columns not compared: Losses)
+Greenville_US_nofiles.out                      A toolkit:    768144 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical | C rpt tables: 526656 numbers agree, stamps agree, worst 0.50 of a last digit (columns not compared: Depth, GW, Losses, Snow)
+Greenville_all_SWMM5_Features.out              A toolkit:    768144 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical
+Greenville_all_SWMM5_Features_SI_Units.out     A toolkit:   7386000 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical
+Inlet Pipe test.out                            A toolkit:     97248 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical | C rpt tables: 69312 numbers agree, stamps agree, worst 0.50 of a last digit (columns not compared: Losses)
+PUMP_STATION.out                               A toolkit:      1560 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical | C rpt tables: 864 numbers agree, stamps agree, worst 0.50 of a last digit
+filled_circ_control.out                        A toolkit:      8640 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical
+filled_circ_drift.out                          A toolkit:      7848 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical
+storage_order_A.out                            A toolkit:      7776 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical | C rpt tables: 4032 numbers agree, stamps agree, worst 0.50 of a last digit
+storage_order_B.out                            A toolkit:      7776 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical
+totals: A 9135216 values, B 9135216 values, C 649824 printed numbers
+
+=== tools/check_gpkg.py, one block per model (files written by: swmm5-gpkg run MODEL.inp [--epsg 3435])
+
+--- Greenville_all_SWMM5_Features_SI_Units
+  ok   application_id is GPKG (0x47504b47)
+  ok   sqlite integrity_check
+  ok   contents: ['links', 'nodes', 'subcatchments', 'swmm_fields', 'swmm_run']
+  ok   three feature tables, two attribute tables
+  ok   geometry types POINT, LINESTRING, POLYGON
+  ok   srs_id 99999 on every layer (Undefined SRS)
+  ok   that srs_id is defined in gpkg_spatial_ref_sys
+  ok   172 node points equal the [COORDINATES] numbers exactly
+  ok   235 link lines run from-node, [VERTICES], to-node exactly (177 interior vertices)
+  ok   30 subcatchment rings equal the [POLYGONS] numbers, closed
+  ok   every geometry blob carries srs_id 99999
+  ok   2447 peaks (the exact stored value, and the time of peak) equal swmm-toolkit
+  ok   swmm_run: 3000 periods of 60 s
+  ok   node types and link types / end nodes equal the .inp sections they sit in (172 nodes, 235 links)
+       node types {'DIVIDER': 1, 'JUNCTION': 149, 'OUTFALL': 5, 'STORAGE': 17}, link types {'CONDUIT': 223, 'ORIFICE': 2, 'OUTLET': 1, 'PUMP': 5, 'WEIR': 4}
+  ok   5364 values equal the peaks in the published run record (swmm5-rust, .out sha256 59b7084e206d...)
+       the record's own node_types: {'JUNCTION': 172} ; link_types: {'CONDUIT': 235}
+       type differs for 2 links: ORIFICE here and in the .inp, CONDUIT in the record
+       type differs for 1 links: OUTLET here and in the .inp, CONDUIT in the record
+       type differs for 5 links: PUMP here and in the .inp, CONDUIT in the record
+       type differs for 4 links: WEIR here and in the .inp, CONDUIT in the record
+       type differs for 1 nodes: DIVIDER here and in the .inp, JUNCTION in the record
+       type differs for 5 nodes: OUTFALL here and in the .inp, JUNCTION in the record
+       type differs for 17 nodes: STORAGE here and in the .inp, JUNCTION in the record
+  ok   GDAL 3.12.4 opens nodes/links/subcatchments: same counts, geometry types, reference system None, *_time columns as text
+  ok   GDAL lists the attribute table swmm_run
+  ok   GDAL lists the attribute table swmm_fields
+  ok   saved-period max_depth equals the .rpt "Reported Max Depth" column for 172 nodes
+  ok   rpt_* node columns equal the Node Depth, Inflow and Flooding Summary tables: 860 printed numbers (0 nodes flooded)
+  ok   rpt_* link columns equal the Link Flow Summary table: 919 printed numbers
+       0 of 172 nodes peak higher over every routing step than in the saved periods
+RESULT: all checks passed
+
+--- Greenville_US_nofiles
+  ok   application_id is GPKG (0x47504b47)
+  ok   sqlite integrity_check
+  ok   contents: ['links', 'nodes', 'subcatchments', 'swmm_fields', 'swmm_run']
+  ok   three feature tables, two attribute tables
+  ok   geometry types POINT, LINESTRING, POLYGON
+  ok   srs_id 3435 on every layer
+  ok   that srs_id is defined in gpkg_spatial_ref_sys
+  ok   172 node points equal the [COORDINATES] numbers exactly
+  ok   235 link lines run from-node, [VERTICES], to-node exactly (177 interior vertices)
+  ok   30 subcatchment rings equal the [POLYGONS] numbers, closed
+  ok   every geometry blob carries srs_id 3435
+  ok   2447 peaks (the exact stored value, and the time of peak) equal swmm-toolkit
+  ok   swmm_run: 312 periods of 300 s
+  ok   node types and link types / end nodes equal the .inp sections they sit in (172 nodes, 235 links)
+       node types {'DIVIDER': 1, 'JUNCTION': 149, 'OUTFALL': 5, 'STORAGE': 17}, link types {'CONDUIT': 223, 'ORIFICE': 2, 'OUTLET': 1, 'PUMP': 5, 'WEIR': 4}
+  ok   GDAL 3.12.4 opens nodes/links/subcatchments: same counts, geometry types, reference system EPSG:3435, *_time columns as text
+  ok   GDAL lists the attribute table swmm_run
+  ok   GDAL lists the attribute table swmm_fields
+  ok   saved-period max_depth equals the .rpt "Reported Max Depth" column for 172 nodes
+  ok   rpt_* node columns equal the Node Depth, Inflow and Flooding Summary tables: 872 printed numbers (6 nodes flooded)
+  ok   rpt_* link columns equal the Link Flow Summary table: 919 printed numbers
+       25 of 172 nodes peak higher over every routing step than in the saved periods; largest gap JCT-148: saved max_depth 33.252, rpt_max_depth 41.483
+RESULT: all checks passed
+
+--- Example1_reg
+  ok   application_id is GPKG (0x47504b47)
+  ok   sqlite integrity_check
+  ok   contents: ['links', 'nodes', 'subcatchments', 'swmm_fields', 'swmm_run']
+  ok   three feature tables, two attribute tables
+  ok   geometry types POINT, LINESTRING, POLYGON
+  ok   srs_id 99999 on every layer (Undefined SRS)
+  ok   that srs_id is defined in gpkg_spatial_ref_sys
+  ok   12 node points equal the [COORDINATES] numbers exactly
+  ok   11 link lines run from-node, [VERTICES], to-node exactly (23 interior vertices)
+  ok   7 subcatchment rings equal the [POLYGONS] numbers, closed
+  ok   every geometry blob carries srs_id 99999
+  ok   213 peaks (the exact stored value, and the time of peak) equal swmm-toolkit
+  ok   swmm_run: 360 periods of 300 s
+  ok   node types and link types / end nodes equal the .inp sections they sit in (12 nodes, 11 links)
+       node types {'JUNCTION': 11, 'OUTFALL': 1}, link types {'CONDUIT': 11}
+  ok   GDAL 3.12.4 opens nodes/links/subcatchments: same counts, geometry types, reference system None, *_time columns as text
+  ok   GDAL lists the attribute table swmm_run
+  ok   GDAL lists the attribute table swmm_fields
+  ok   saved-period max_depth equals the .rpt "Reported Max Depth" column for 12 nodes
+  ok   rpt_* node columns equal the Node Depth, Inflow and Flooding Summary tables: 60 printed numbers (0 nodes flooded)
+  ok   rpt_* link columns equal the Link Flow Summary table: 44 printed numbers
+       9 of 12 nodes peak higher over every routing step than in the saved periods; largest gap J9: saved max_depth 1.642, rpt_max_depth 1.690
+RESULT: all checks passed
+
+--- PUMP_STATION
+  ok   application_id is GPKG (0x47504b47)
+  ok   sqlite integrity_check
+  ok   contents: ['links', 'nodes', 'subcatchments', 'swmm_fields', 'swmm_run']
+  ok   three feature tables, two attribute tables
+  ok   geometry types POINT, LINESTRING, POLYGON
+  ok   srs_id 99999 on every layer (Undefined SRS)
+  ok   that srs_id is defined in gpkg_spatial_ref_sys
+  ok   5 node points equal the [COORDINATES] numbers exactly
+  ok   4 link lines run from-node, [VERTICES], to-node exactly (0 interior vertices)
+  ok   0 subcatchment rings equal the [POLYGONS] numbers, closed
+  ok   every geometry blob carries srs_id 99999
+  ok   50 peaks (the exact stored value, and the time of peak) equal swmm-toolkit
+  ok   swmm_run: 24 periods of 300 s
+  ok   node types and link types / end nodes equal the .inp sections they sit in (5 nodes, 4 links)
+       node types {'JUNCTION': 3, 'OUTFALL': 1, 'STORAGE': 1}, link types {'CONDUIT': 3, 'PUMP': 1}
+  ok   GDAL 3.12.4 opens nodes/links/subcatchments: same counts, geometry types, reference system None, *_time columns as text
+  ok   GDAL lists the attribute table swmm_run
+  ok   GDAL lists the attribute table swmm_fields
+  ok   saved-period max_depth equals the .rpt "Reported Max Depth" column for 5 nodes
+  ok   rpt_* node columns equal the Node Depth, Inflow and Flooding Summary tables: 27 printed numbers (1 nodes flooded)
+  ok   rpt_* link columns equal the Link Flow Summary table: 14 printed numbers
+       1 of 5 nodes peak higher over every routing step than in the saved periods; largest gap STOR-10: saved max_depth 6.169, rpt_max_depth 7.000
+RESULT: all checks passed
+
+--- Inlet Pipe test
+  ok   application_id is GPKG (0x47504b47)
+  ok   sqlite integrity_check
+  ok   contents: ['links', 'nodes', 'subcatchments', 'swmm_fields', 'swmm_run']
+  ok   three feature tables, two attribute tables
+  ok   geometry types POINT, LINESTRING, POLYGON
+  ok   srs_id 99999 on every layer (Undefined SRS)
+  ok   that srs_id is defined in gpkg_spatial_ref_sys
+  ok   90 node points equal the [COORDINATES] numbers exactly
+  ok   90 link lines run from-node, [VERTICES], to-node exactly (1 interior vertices)
+  ok   1 subcatchment rings equal the [POLYGONS] numbers, closed
+  ok   every geometry blob carries srs_id 99999
+  ok   998 peaks (the exact stored value, and the time of peak) equal swmm-toolkit
+  ok   swmm_run: 96 periods of 900 s
+  ok   node types and link types / end nodes equal the .inp sections they sit in (90 nodes, 90 links)
+       node types {'JUNCTION': 23, 'OUTFALL': 66, 'STORAGE': 1}, link types {'CONDUIT': 24, 'ORIFICE': 66}
+  ok   GDAL 3.12.4 opens nodes/links/subcatchments: same counts, geometry types, reference system None, *_time columns as text
+  ok   GDAL lists the attribute table swmm_run
+  ok   GDAL lists the attribute table swmm_fields
+  ok   saved-period max_depth equals the .rpt "Reported Max Depth" column for 90 nodes
+  ok   rpt_* node columns equal the Node Depth, Inflow and Flooding Summary tables: 450 printed numbers (0 nodes flooded)
+  ok   rpt_* link columns equal the Link Flow Summary table: 272 printed numbers
+       0 of 90 nodes peak higher over every routing step than in the saved periods
+RESULT: all checks passed
+
+=== engine files written by swmm5-gpkg run against runswmm-rs (cmp on .out; diff on .rpt without the three clock lines)
+Greenville_all_SWMM5_Features_SI_Units: .out identical, .rpt identical
+Greenville_US_nofiles: .out identical, .rpt identical
+Example1_reg: .out identical, .rpt identical
+PUMP_STATION: .out identical, .rpt identical
+Inlet Pipe test: .out identical, .rpt identical
+sha256 Greenville_all_SWMM5_Features_SI_Units.out: 59b7084e206d648009ffc781bcee8c973d0b3c365ddfdd87a09a75a0674b1782
+  (the same as files.out.sha256 in swmm-run-record-repo/demo/greenville/swmm5-rust/record.json)
+
+=== tools/open_in_rustgis.py Greenville_US.gpkg greenville_rustgis.png
+notice: Greenville_US.gpkg: 2 attribute-only tables not added: GeoPackage attribute tables are not supported
+notice: EPSG:3435: the most accurate datum transformation needs a grid RustGIS doesn't have yet, so the next one was used; places may be metres off (NAD27, for one, is about 10 m off without its grid)
+RustGIS 0.7.0 sees:
+  subcatchments  Polygon     30 features, 21 fields
+  nodes          Point      172 features, 25 fields
+  links          Polyline   235 features, 23 fields
+styled links by rpt_max_flow, nodes by rpt_max_depth; wrote greenville_rustgis.png
+
+=== tools/open_in_rustgis.py Example1_reg.gpkg example1_rustgis.png   (no --epsg given when the file was written)
+notice: links: its coordinate system (srs_id 99999) can't be read (LOCAL_CS coordinate systems aren't supported); read as longitude/latitude
+notice: nodes: its coordinate system (srs_id 99999) can't be read (LOCAL_CS coordinate systems aren't supported); read as longitude/latitude
+notice: subcatchments: its coordinate system (srs_id 99999) can't be read (LOCAL_CS coordinate systems aren't supported); read as longitude/latitude
+notice: Example1_reg.gpkg: 2 attribute-only tables not added: GeoPackage attribute tables are not supported
+RustGIS 0.7.0 sees:
+  subcatchments  Polygon      7 features, 23 fields
+  nodes          Point       12 features, 27 fields
+  links          Polyline    11 features, 25 fields
+styled links by rpt_max_flow, nodes by rpt_max_depth; wrote example1_rustgis.png
+
+=== added later on 19 November 2026: OpenSWMM 6 results files (version 60000)
+Written by swmm6-rust (commit 08970ea) from the same two models. Their SHA-256 are the ones the
+swmm-run-record demo records name for every OpenSWMM 6 engine:
+10d5b101007ee4963b64c1f1e83c8201dd5cf60216e358dccbb15b0c941b6847  Example1.out
+5c8564496939b764487c174c0175940c1a5a80d0d0798ca4f4317afa6f2be046  Greenville_all_SWMM5_Features_SI_Units.out
+
+OpenSWMM 6 numbers node types DIVIDER = 2, STORAGE = 3 (SWMM 5: STORAGE = 2, DIVIDER = 3) and labels the saved
+properties 0,2,4 (nodes) and 0,6,7,4,8 (links) where SWMM 5 writes 0,2,3 and 0,4,4,3,5. swmm-out reads each file by
+the numbering of the engine that wrote it.
+
+--- swmmout info Greenville (OpenSWMM 6 file)
+engine version  60000 (OpenSWMM 6 numbering)
+flow units      LPS (SI)
+error code      0
+subcatchments   30
+nodes           172 (149 JUNCTION, 5 OUTFALL, 17 STORAGE, 1 DIVIDER)
+links           235 (223 CONDUIT, 5 PUMP, 2 ORIFICE, 4 WEIR, 1 OUTLET)
+
+--- tools/check_outfile.py on the two OpenSWMM 6 files (no .rpt table check: C)
+Example1.out                                   A toolkit:     82080 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical
+Greenville_all_SWMM5_Features_SI_Units.out     A toolkit:   7386000 values identical (dates within 1.0e-03 s of start+k*step) | B swmmrr: identical
+totals: A 7468080 values, B 7468080 values, C 0 printed numbers
+
+--- tools/check_gpkg.py on GeoPackages written by: swmm5-gpkg export MODEL.inp OPENSWMM6.out
+
+- Greenville_all_SWMM5_Features_SI_Units
+  ok   application_id is GPKG (0x47504b47)
+  ok   sqlite integrity_check
+  ok   contents: ['links', 'nodes', 'subcatchments', 'swmm_fields', 'swmm_run']
+  ok   three feature tables, two attribute tables
+  ok   geometry types POINT, LINESTRING, POLYGON
+  ok   srs_id 99999 on every layer (Undefined SRS)
+  ok   that srs_id is defined in gpkg_spatial_ref_sys
+  ok   172 node points equal the [COORDINATES] numbers exactly
+  ok   235 link lines run from-node, [VERTICES], to-node exactly (177 interior vertices)
+  ok   30 subcatchment rings equal the [POLYGONS] numbers, closed
+  ok   every geometry blob carries srs_id 99999
+  ok   2447 peaks (the exact stored value, and the time of peak) equal swmm-toolkit
+  ok   swmm_run: 3000 periods of 60 s
+  ok   node types and link types / end nodes equal the .inp sections they sit in (172 nodes, 235 links)
+       node types {'DIVIDER': 1, 'JUNCTION': 149, 'OUTFALL': 5, 'STORAGE': 17}, link types {'CONDUIT': 223, 'ORIFICE': 2, 'OUTLET': 1, 'PUMP': 5, 'WEIR': 4}
+  ok   GDAL 3.12.4 opens nodes/links/subcatchments: same counts, geometry types, reference system None, *_time columns as text
+  ok   GDAL lists the attribute table swmm_run
+  ok   GDAL lists the attribute table swmm_fields
+RESULT: all checks passed
+
+- Example1
+  ok   application_id is GPKG (0x47504b47)
+  ok   sqlite integrity_check
+  ok   contents: ['links', 'nodes', 'subcatchments', 'swmm_fields', 'swmm_run']
+  ok   three feature tables, two attribute tables
+  ok   geometry types POINT, LINESTRING, POLYGON
+  ok   srs_id 99999 on every layer (Undefined SRS)
+  ok   that srs_id is defined in gpkg_spatial_ref_sys
+  ok   12 node points equal the [COORDINATES] numbers exactly
+  ok   11 link lines run from-node, [VERTICES], to-node exactly (23 interior vertices)
+  ok   7 subcatchment rings equal the [POLYGONS] numbers, closed
+  ok   every geometry blob carries srs_id 99999
+  ok   213 peaks (the exact stored value, and the time of peak) equal swmm-toolkit
+  ok   swmm_run: 360 periods of 300 s
+  ok   node types and link types / end nodes equal the .inp sections they sit in (12 nodes, 11 links)
+       node types {'JUNCTION': 11, 'OUTFALL': 1}, link types {'CONDUIT': 11}
+  ok   GDAL 3.12.4 opens nodes/links/subcatchments: same counts, geometry types, reference system None, *_time columns as text
+  ok   GDAL lists the attribute table swmm_run
+  ok   GDAL lists the attribute table swmm_fields
+RESULT: all checks passed
+
+--- saved properties of Greenville read from the SWMM 5 file and from the OpenSWMM 6 file
+nodes (type, invert, full depth): 172 of 172 identical; subcatchments (area): 30 of 30 identical;
+links (type, length, full depth): 234 of 235 identical; the other is DUMMY conduit 1249, full depth 3.048e-07 m in the
+SWMM 5 file and 0 in the OpenSWMM 6 file.
+
+--- cargo test --release -p swmm-out -p swmm5-gpkg (13 tests)
+test tests::dates_decode ... ok
+test tests::refuses_what_is_not_an_output_file ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test inpmap::tests::reads_the_map_sections ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test results_of_another_model_are_refused ... ok
+test an_openswmm6_results_file_exports_with_the_right_types ... ok
+test without_an_epsg_no_reference_system_is_claimed ... ok
+test the_geopackage_is_valid_and_holds_the_model ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s

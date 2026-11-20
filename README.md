@@ -78,9 +78,27 @@ cd app && python3 build.py                 # the app, from results/ and the thre
 
 The C interface (`crates/capi`) exports EPA's `swmm_*` functions and a handle-based twin of each (`swmm5rs_create`, `swmm5rs_open`, `swmm5rs_step`, ...), so one process or one WebAssembly instance can hold any number of models.
 
+## Results in Rust, and in a GIS
+
+Two crates sit beside the engine and leave it untouched (added 19 November 2026):
+
+* [`crates/outfile`](crates/outfile) (`swmm-out`): a reader for the binary `.out` file, with no dependencies and no `unsafe`. Names, types, properties, variables with units, time series, snapshots and peaks; a `swmmout` command line. Checked value for value against OWA's swmm-toolkit (9,135,216 values, identical bits) and against the engine's own report tables (649,824 printed numbers). It also reads OpenSWMM 6's files, by that engine's own numbering of node types and properties.
+* [`crates/gpkg`](crates/gpkg) (`swmm5-gpkg`): runs a model with the engine and writes its nodes, links and subcatchments, with results, to a GeoPackage through [terrio](https://github.com/opengeos/terrio) (pure Rust, no GDAL). It opens in RustGIS. It carries both the saved-period peaks (`max_*`) and the engine's maxima over every routing step (`rpt_*`), which it reads from the engine's memory after the last step.
+
+```sh
+cargo build --release -p swmm5-gpkg                    # the first build compiles terrio: several minutes
+target/release/swmm5-gpkg run model.inp --epsg 3435    # model.rpt, model.out, model.gpkg
+target/release/swmmout stats model.out link            # peaks of every link variable, as CSV
+cargo test -p swmm-out -p swmm5-gpkg
+```
+
+`swmm5-gpkg` is not a default member of the workspace, so `cargo build` builds what it built before. Each crate's README says what was checked, against what, and what was not. The check scripts are `tools/check_outfile.py`, `tools/check_gpkg.py` and `tools/open_in_rustgis.py`; their output for the five models used is in `results/outfile_gpkg_checks.log`.
+
 ## AI use
 
 This repository was produced with Claude, Anthropic's AI model (Claude Opus 5.5), in one session on 28 and 29 October 2026, at the request of Robert (Bob) Dickinson, who chose the goal (safe Rust, byte-identical to EPA 5.2.4) and supplies the model corpus ([SWMMBobSWMM6/1729-SWMM5-Models-2030](https://github.com/SWMMBobSWMM6/1729-SWMM5-Models-2030)). Claude ran c2rust and wrote the passes over its output, the skeleton, the rule book and the integration; ran the 54-module translation as ten batches of parallel agents; wrote `ccast`, `cio` and their tests, the C interface, the WebAssembly build, the gates, the lockstep tool, the app and the essay. The work was checked mechanically by the byte-for-byte gates, not by the AI's judgment. It has not yet been reviewed line by line by a person.
+
+`crates/outfile`, `crates/gpkg` and the three scripts named above were added on 19 November 2026 in one session with Claude (Claude Fable 5.2), again at Bob's request: he asked for a Rust `.out` reader and for the engine's results in a GeoPackage through terrio. Claude wrote that code, its tests, its check scripts and its READMEs, and ran the checks, which are mechanical (see each crate's README). The engine crate was not changed. That code has not been reviewed line by line by a person either.
 
 ## License and credit
 
