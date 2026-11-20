@@ -82,7 +82,7 @@ The C interface (`crates/capi`) exports EPA's `swmm_*` functions and a handle-ba
 
 Two crates sit beside the engine and leave it untouched (added 19 November 2026):
 
-* [`crates/outfile`](crates/outfile) (`swmm-out`): a reader for the binary `.out` file, with no dependencies and no `unsafe`. Names, types, properties, variables with units, time series, snapshots and peaks; a `swmmout` command line. Checked value for value against OWA's swmm-toolkit (9,135,216 values, identical bits) and against the engine's own report tables (649,824 printed numbers).
+* [`crates/outfile`](crates/outfile) (`swmm-out`): a reader for the binary `.out` file, with no dependencies and no `unsafe`. Names, types, properties, variables with units, time series, snapshots and peaks; a `swmmout` command line. Checked value for value against OWA's swmm-toolkit (9,135,216 values, identical bits) and against the engine's own report tables (649,824 printed numbers). It also reads OpenSWMM 6's files, by that engine's own numbering of node types and properties.
 * [`crates/gpkg`](crates/gpkg) (`swmm5-gpkg`): runs a model with the engine and writes its nodes, links and subcatchments, with results, to a GeoPackage through [terrio](https://github.com/opengeos/terrio) (pure Rust, no GDAL). It opens in RustGIS. It carries both the saved-period peaks (`max_*`) and the engine's maxima over every routing step (`rpt_*`), which it reads from the engine's memory after the last step.
 
 ```sh

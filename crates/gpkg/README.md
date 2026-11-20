@@ -81,7 +81,7 @@ Negative controls, each on its own copy of the file: one `max_flow` multiplied b
 * **`rpt_*` covers part of the report.** Node depth, HGL, lateral and total inflow, flooding rate and hours; link flow, velocity and depth ratio. Surcharge, storage, outfall and pump summaries, and the subcatchment runoff summary, are not carried.
 * **Summaries only.** There is one row per object, with peaks. Time series for animation are in the `.out`; `swmm-out` reads them, and nothing here writes them to the GeoPackage yet.
 * **The reference system is whatever you say it is.** `--epsg` is written as given. Nothing checks that the model's coordinates are in it.
-* **SWMM 6 has not been tried.** `export` should read any `.out` in SWMM 5's layout; only swmm5-rust's were tested.
+* **OpenSWMM 6 through `export` only.** `run` uses swmm5-rust. `export` was tried on two OpenSWMM 6 results files (Greenville and Example 1, from swmm6-rust): the types and saved properties in the GeoPackage are the `.inp`'s (17 storage nodes and 1 divider on Greenville, though that engine numbers them the other way round in its header), and 2,660 peaks equal swmm-toolkit. Their `rpt_*` columns are empty, as for any `export`.
 
 ## AI use
 

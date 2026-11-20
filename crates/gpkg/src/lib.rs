@@ -29,7 +29,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::io::{Read, Seek};
 use std::path::Path;
-use swmm_out::{iso, Kind, OutFile, Stat, PROP_AREA, PROP_INVERT, PROP_LENGTH, PROP_MAX_DEPTH};
+use swmm_out::{iso, Kind, OutFile, Stat};
 use terrio::vector::Coord;
 use terrio::{Feature, FieldDef, FieldType, FieldValue, Geometry, GeometryType, Layer};
 
@@ -423,8 +423,8 @@ pub fn build_layers<R: Read + Seek>(
             text(&n.id),
             text(i.and_then(|i| out.node_type(i)).unwrap_or(n.kind)),
             FieldValue::Boolean(i.is_some()),
-            opt_real(i.and_then(|i| out.node_props.get(i, PROP_INVERT, 0))),
-            opt_real(i.and_then(|i| out.node_props.get(i, PROP_MAX_DEPTH, 0))),
+            opt_real(i.and_then(|i| out.node_invert(i))),
+            opt_real(i.and_then(|i| out.node_full_depth(i))),
         ];
         node_res.values(&n.id, &dates, &mut a);
         a.push(opt_real(
@@ -543,8 +543,8 @@ pub fn build_layers<R: Read + Seek>(
             text(&l.from),
             text(&l.to),
             FieldValue::Boolean(i.is_some()),
-            opt_real(i.and_then(|i| out.link_props.get(i, PROP_LENGTH, 0))),
-            opt_real(i.and_then(|i| out.link_props.get(i, PROP_MAX_DEPTH, 0))),
+            opt_real(i.and_then(|i| out.link_length(i))),
+            opt_real(i.and_then(|i| out.link_full_depth(i))),
         ];
         link_res.values(&l.id, &dates, &mut a);
         match link_res.stat(&l.id, "flow").filter(|s| !s.min.is_nan()) {
@@ -612,7 +612,7 @@ pub fn build_layers<R: Read + Seek>(
             text(&s.rain_gage),
             text(&s.outlet),
             FieldValue::Boolean(i.is_some()),
-            opt_real(i.and_then(|i| out.subcatchment_props.get(i, PROP_AREA, 0))),
+            opt_real(i.and_then(|i| out.subcatchment_area(i))),
         ];
         sub_res.values(&s.id, &dates, &mut a);
         let exterior = ring.iter().map(|&(x, y)| Coord::xy(x, y)).collect();

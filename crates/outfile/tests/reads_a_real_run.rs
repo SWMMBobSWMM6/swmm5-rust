@@ -4,7 +4,7 @@
 //! The wider checks (every value against OWA's swmm-toolkit and against the engine's own
 //! report tables, on real models) are in tools/check_outfile.py; see the crate README.
 use std::path::PathBuf;
-use swmm_out::{iso, Kind, OutFile, PROP_AREA, PROP_INVERT, PROP_LENGTH, PROP_MAX_DEPTH};
+use swmm_out::{iso, Dialect, Kind, OutFile, PROP_AREA, PROP_INVERT, PROP_LENGTH, PROP_MAX_DEPTH};
 
 fn run(tag: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("swmm-out-test-{}-{tag}", std::process::id()));
@@ -46,6 +46,20 @@ fn header_names_types_and_properties() {
     assert_eq!(f.link_props.get(0, PROP_LENGTH, 0), Some(400.0));
     assert_eq!(f.link_props.get(0, PROP_MAX_DEPTH, 0), Some(1.5));
     assert_eq!(f.link_props.get(3, PROP_LENGTH, 0), Some(0.0)); // a pump has no length
+                                                                // the same, asked without code numbers
+    assert_eq!(f.dialect(), Dialect::Swmm5);
+    assert_eq!(
+        (
+            f.subcatchment_area(0),
+            f.node_invert(0),
+            f.node_full_depth(4)
+        ),
+        (Some(1.0), Some(100.0), Some(12.0))
+    );
+    assert_eq!(
+        (f.link_length(0), f.link_full_depth(0), f.link_offsets(0)),
+        (Some(400.0), Some(1.5), Some((0.0, 0.0)))
+    );
     let names: Vec<_> = f
         .variables(Kind::Node)
         .into_iter()
@@ -156,4 +170,46 @@ fn a_run_that_did_not_finish() {
     let n = lie.len();
     lie[n - 16..n - 12].copy_from_slice(&999i32.to_le_bytes());
     assert!(OutFile::from_bytes(lie).is_err());
+}
+
+/// The same model run by OpenSWMM 6 (swmm6-rust, byte-identical to the C++ engine on its gates);
+/// the file is kept in tests/data because no OpenSWMM 6 engine is built in this repository.
+/// OpenSWMM 6 numbers node types and property codes its own way: what the reader says must
+/// still be what the input file says.
+#[test]
+fn an_openswmm6_file_reads_by_its_own_numbering() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/tiny_openswmm6.out");
+    let mut f = OutFile::open(path).unwrap();
+    assert_eq!((f.version, f.dialect()), (60000, Dialect::OpenSwmm6));
+    assert_eq!(f.nodes, ["J1", "J2", "J3", "O1", "WET1"]);
+    // the header's own numbers: WET1, a storage node, carries 3, which SWMM 5 uses for a divider
+    assert_eq!(f.node_props.codes, [0, 2, 4]);
+    assert_eq!(f.link_props.codes, [0, 6, 7, 4, 8]);
+    assert_eq!(f.node_props.get(4, 0, 0), Some(3.0));
+    let types: Vec<_> = (0..5).map(|i| f.node_type(i).unwrap()).collect();
+    assert_eq!(
+        types,
+        ["JUNCTION", "JUNCTION", "JUNCTION", "OUTFALL", "STORAGE"]
+    );
+    let types: Vec<_> = (0..4).map(|i| f.link_type(i).unwrap()).collect();
+    assert_eq!(types, ["CONDUIT", "CONDUIT", "CONDUIT", "PUMP"]);
+    assert_eq!(
+        (
+            f.subcatchment_area(0),
+            f.node_invert(0),
+            f.node_full_depth(4)
+        ),
+        (Some(1.0), Some(100.0), Some(12.0))
+    );
+    assert_eq!(
+        (f.link_length(0), f.link_full_depth(0), f.link_offsets(0)),
+        (Some(400.0), Some(1.5), Some((0.0, 0.0)))
+    );
+    assert_eq!(f.link_length(3), Some(0.0));
+    // and the model's fixed answers, from the other engine
+    assert_eq!((f.n_periods, f.report_step), (120, 60));
+    let p = f.series_by_name(Kind::Link, "P1", "flow").unwrap();
+    assert!(p.iter().all(|&q| q == 0.0 || q == 5.0) && p.contains(&5.0));
+    let q = f.series_by_name(Kind::Link, "C1", "flow").unwrap();
+    assert!((q[119] - 1.0).abs() < 0.01);
 }

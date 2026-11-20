@@ -19,8 +19,9 @@
 //! ```
 //!
 //! Every count is taken from the file, so a file with more reporting variables
-//! than SWMM 5.2 writes (OpenSWMM 6 stamps version 60000 on this layout) still
-//! reads; variables this reader has no name for are called `code_N`.
+//! than SWMM 5.2 writes still reads; variables this reader has no name for are
+//! called `code_N`. OpenSWMM 6 writes this layout too, stamped version 60000,
+//! with its own numbers for node types and for property codes: see [`Dialect`].
 //!
 //! The reader walks the file from byte 0 and uses the closing record only as a
 //! check. EPA writes the three positions as the low 32 bits of a 64-bit file
@@ -37,7 +38,9 @@ use std::path::Path;
 /// First and last four bytes of a complete file.
 pub const MAGIC: i32 = 516114522;
 
-/// Property codes (`output.c`: INPUT_TYPE_CODE ... INPUT_LENGTH).
+/// Property codes as SWMM 5 numbers them (`output.c`: INPUT_TYPE_CODE ... INPUT_LENGTH).
+/// OpenSWMM 6 labels the same properties with other numbers (see [`Dialect`]); to read a
+/// property of either engine's file use the accessors ([`OutFile::node_invert`] and the rest).
 pub const PROP_TYPE: i32 = 0;
 pub const PROP_AREA: i32 = 1;
 pub const PROP_INVERT: i32 = 2;
@@ -46,7 +49,29 @@ pub const PROP_OFFSET: i32 = 4;
 pub const PROP_LENGTH: i32 = 5;
 
 pub const FLOW_UNITS: [&str; 6] = ["CFS", "GPM", "MGD", "CMS", "LPS", "MLD"];
+/// Node types by SWMM 5's codes.
 pub const NODE_TYPES: [&str; 4] = ["JUNCTION", "OUTFALL", "STORAGE", "DIVIDER"];
+/// Node types by OpenSWMM 6's codes: DIVIDER and STORAGE change places.
+pub const NODE_TYPES_OPENSWMM6: [&str; 4] = ["JUNCTION", "OUTFALL", "DIVIDER", "STORAGE"];
+/// Header version numbers from here up are OpenSWMM 6's (it stamps 60000).
+pub const OPENSWMM6_VERSION: i32 = 60000;
+
+/// Which engine's numbering a file's header uses. The layout is the same; three sets of numbers are not.
+///
+/// | | SWMM 5 | OpenSWMM 6 |
+/// |---|---|---|
+/// | node type codes 2, 3 | STORAGE, DIVIDER | DIVIDER, STORAGE |
+/// | node property codes (type, invert, full depth) | 0, 2, 3 | 0, 2, 4 |
+/// | link property codes (type, offsets, full depth, length) | 0, 4, 4, 3, 5 | 0, 6, 7, 4, 8 |
+///
+/// Each engine writes its own enumeration (OpenSWMM 6: `NodeType` in `NodeData.hpp`, written
+/// by `DefaultOutputPlugin.cpp`), so a storage node of an OpenSWMM 6 file carries the code a
+/// SWMM 5 reader takes for a divider. Found on real files of both engines, 19 November 2026.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Dialect {
+    Swmm5,
+    OpenSwmm6,
+}
 pub const LINK_TYPES: [&str; 5] = ["CONDUIT", "PUMP", "ORIFICE", "WEIR", "OUTLET"];
 pub const QUALITY_UNITS: [&str; 3] = ["mg/L", "ug/L", "#/L"];
 
@@ -573,10 +598,76 @@ impl<R: Read + Seek> OutFile<R> {
         }
     }
 
-    /// `JUNCTION`, `OUTFALL`, `STORAGE` or `DIVIDER`.
+    /// Whose numbering the header uses, by the version stamp.
+    pub fn dialect(&self) -> Dialect {
+        if self.version >= OPENSWMM6_VERSION {
+            Dialect::OpenSwmm6
+        } else {
+            Dialect::Swmm5
+        }
+    }
+
+    /// `JUNCTION`, `OUTFALL`, `STORAGE` or `DIVIDER`, by the numbering of the engine that wrote the file.
     pub fn node_type(&self, index: usize) -> Option<&'static str> {
         let t = self.node_props.get(index, PROP_TYPE, 0)? as usize;
-        NODE_TYPES.get(t).copied()
+        match self.dialect() {
+            Dialect::Swmm5 => NODE_TYPES.get(t).copied(),
+            Dialect::OpenSwmm6 => NODE_TYPES_OPENSWMM6.get(t).copied(),
+        }
+    }
+
+    /// Area of a subcatchment (acres or hectares).
+    pub fn subcatchment_area(&self, index: usize) -> Option<f64> {
+        self.subcatchment_props.get(index, PROP_AREA, 0)
+    }
+
+    /// Invert elevation of a node (feet or metres).
+    pub fn node_invert(&self, index: usize) -> Option<f64> {
+        self.node_props.get(index, PROP_INVERT, 0)
+    }
+
+    /// Maximum depth of a node.
+    pub fn node_full_depth(&self, index: usize) -> Option<f64> {
+        let code = if self.dialect() == Dialect::Swmm5 {
+            PROP_MAX_DEPTH
+        } else {
+            4
+        };
+        self.node_props.get(index, code, 0)
+    }
+
+    /// Upstream and downstream offsets of a link above its end nodes' inverts.
+    pub fn link_offsets(&self, index: usize) -> Option<(f64, f64)> {
+        match self.dialect() {
+            Dialect::Swmm5 => self
+                .link_props
+                .get(index, PROP_OFFSET, 0)
+                .zip(self.link_props.get(index, PROP_OFFSET, 1)),
+            Dialect::OpenSwmm6 => self
+                .link_props
+                .get(index, 6, 0)
+                .zip(self.link_props.get(index, 7, 0)),
+        }
+    }
+
+    /// Full depth of a link's cross-section (0 for pumps and outlets).
+    pub fn link_full_depth(&self, index: usize) -> Option<f64> {
+        let code = if self.dialect() == Dialect::Swmm5 {
+            PROP_MAX_DEPTH
+        } else {
+            4
+        };
+        self.link_props.get(index, code, 0)
+    }
+
+    /// Length of a conduit (0 for other links).
+    pub fn link_length(&self, index: usize) -> Option<f64> {
+        let code = if self.dialect() == Dialect::Swmm5 {
+            PROP_LENGTH
+        } else {
+            8
+        };
+        self.link_props.get(index, code, 0)
     }
 
     /// `CONDUIT`, `PUMP`, `ORIFICE`, `WEIR` or `OUTLET`.

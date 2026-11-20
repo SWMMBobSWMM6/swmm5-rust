@@ -287,3 +287,54 @@ fn results_of_another_model_are_refused() {
     assert!(err.to_string().contains("not the same model"), "{err}");
     assert!(!dir.join("x.gpkg").exists());
 }
+
+/// `export` from an OpenSWMM 6 results file: the types and the saved properties must be the
+/// input file's, though that engine numbers them differently in the header.
+#[test]
+fn an_openswmm6_results_file_exports_with_the_right_types() {
+    let dir = std::env::temp_dir().join(format!("swmm5-gpkg-test-{}-swmm6", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let data = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../outfile/tests/data");
+    let gpkg = dir.join("tiny6.gpkg");
+    export(
+        &data.join("tiny.inp"),
+        &data.join("tiny_openswmm6.out"),
+        &gpkg,
+        &Options::default(),
+        None,
+    )
+    .unwrap();
+    let m = Made {
+        dir,
+        layers: terrio::open_vector(&gpkg.to_string_lossy(), &Default::default())
+            .unwrap()
+            .layers,
+    };
+    let (nodes, links, subs) = (
+        layer(&m, "nodes"),
+        layer(&m, "links"),
+        layer(&m, "subcatchments"),
+    );
+    assert_eq!(
+        value(nodes, "WET1", "type"),
+        &FieldValue::Text("STORAGE".into())
+    );
+    assert_eq!(
+        value(nodes, "O1", "type"),
+        &FieldValue::Text("OUTFALL".into())
+    );
+    assert_eq!(value(links, "P1", "type"), &FieldValue::Text("PUMP".into()));
+    assert_eq!(
+        (
+            num(nodes, "WET1", "invert_elev"),
+            num(nodes, "WET1", "full_depth")
+        ),
+        (90.0, 12.0)
+    );
+    assert_eq!(
+        (num(links, "C1", "length"), num(links, "C1", "full_depth")),
+        (400.0, 1.5)
+    );
+    assert_eq!(num(subs, "S1", "area"), 1.0);
+    assert_eq!(num(links, "P1", "max_flow"), 5.0);
+}

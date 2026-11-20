@@ -36,6 +36,7 @@ The layout is in the crate documentation (`src/lib.rs`), taken from `crates/engi
 
 * **Every count comes from the file.** The number of properties and of variables of each kind is read, not assumed, so a file with more variables than SWMM 5.2 writes still reads. A code this reader has no name for is called `code_N`.
 * **The type code is an integer.** The engine writes each node's and link's type with `fwrite(&k, sizeof(INT4), ...)` and the other properties as `REAL4`. Read as a float, type 1 (OUTFALL) is 1.4e-45, which truncates to 0 (JUNCTION).
+* **Each engine's own numbers.** OpenSWMM 6 writes this layout (stamped version 60000) with DIVIDER = 2 and STORAGE = 3, where SWMM 5 has STORAGE = 2 and DIVIDER = 3, and labels the saved properties with other code numbers (a node's are 0, 2, 4, not 0, 2, 3; a link's 0, 6, 7, 4, 8, not 0, 4, 4, 3, 5). A reader that uses SWMM 5's tables calls an OpenSWMM 6 storage node a divider. `node_type()` and the property accessors (`node_invert`, `node_full_depth`, `link_length`, `link_full_depth`, `link_offsets`, `subcatchment_area`) go by the file's version; `dialect()` says which applies.
 * **The file is walked from byte 0; the closing record is a check, not a map.** EPA writes the three section positions as the low 32 bits of a 64-bit offset, so above 4 GiB they cannot be used to seek. The walked positions are compared with them modulo 2^32, and a mismatch is an error.
 * **A run that did not finish is refused unless asked for.** `OutFile::open` wants the closing record. `OutFile::open_partial` (`--partial`) reads the periods that were written in full and sets `complete` to false.
 
@@ -50,16 +51,20 @@ Dates are days since 30 December 1899. `iso()` decodes them as the engine's `dat
 | swmm-toolkit 0.17.0 (OWA's C output library) | every value of every period: 9,135,216 | identical bits |
 | `swmmrr/outfile.py` (the run-record tool's reader) | the same 9,135,216 values, and the dates | identical |
 | the engine's own time series tables in the `.rpt` | 649,824 printed numbers and every time stamp, five models | agree to the digits printed |
+| OpenSWMM 6 files (swmm6-rust on Greenville and Example 1; the SHA-256 of each is the one the published run records name) against swmm-toolkit and `swmmrr` | 7,468,080 values | identical bits |
+| the same two files and a third (`tests/data/tiny_openswmm6.out`) against their `.inp` | every node and link type; the saved properties | equal |
 
 The models: the two Greenville models (CFS and LPS; 172 nodes, 235 links, 30 subcatchments; pumps, weirs, orifices, an outlet, storage, a divider), EPA's Example 1 (one pollutant), `PUMP_STATION` (GPM), `Inlet Pipe test` (LPS), and four of this repository's gate decks. The largest file is 29.6 MB, 3,000 periods.
 
 Negative controls, so the checks are known to fail when they should: every series shifted by one period (153 series flagged by the toolkit check, 28,421 numbers by the report check), node depth swapped with head (12 series, 4,320 numbers), one bit flipped in one value (that series flagged).
 
-`cargo test -p swmm-out` runs a small model (`tests/data/tiny.inp`) with the engine and checks the reader against what the input fixes: a steady 1 cfs inflow, 1 in/hr on one impervious acre (at most 1.0083 cfs), a 5 cfs pump, the names, types and properties, a file cut mid-period, and a closing record that lies.
+On the same model the two engines' headers hold the same properties but for one value: SWMM 5 gives a DUMMY conduit a full depth of 3.05e-07 m, OpenSWMM 6 gives it 0.
+
+`cargo test -p swmm-out` runs a small model (`tests/data/tiny.inp`) with the engine and checks the reader against what the input fixes: a steady 1 cfs inflow, 1 in/hr on one impervious acre (at most 1.0083 cfs), a 5 cfs pump, the names, types and properties, a file cut mid-period, and a closing record that lies. It also reads the same model's OpenSWMM 6 output, kept as a fixture, and expects the same types and properties.
 
 ## What this does not show
 
-* **Only version 52004 files were read.** SWMM 5.1 writes the same layout and should read; SWMM 5.0 used some variable codes differently and its names here would be wrong. OpenSWMM 6 stamps 60000 on this layout; no such file was tested.
+* **Two version stamps were read: 52004 and 60000.** SWMM 5.1 writes SWMM 5.2's layout and should read; SWMM 5.0 used some variable codes differently and its names here would be wrong. The OpenSWMM 6 files read had SWMM 5's reporting variables and no more; a file with OpenSWMM 6's extra variables was not tried, and those would be named `code_N`.
 * **No file above 4 GiB was read.** The reader is written for it; it has not been tried.
 * **Agreement with swmm-toolkit is agreement between two readers of one layout**, both written from EPA's `output.c`. The report tables are the check that does not share that origin: the engine printed those numbers itself.
 * **Peaks are of saved periods.** `stats()` sees one value per report step. The engine's summary tables are kept over every routing step and can be higher (see `crates/gpkg`).

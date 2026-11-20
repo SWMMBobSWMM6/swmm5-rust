@@ -73,7 +73,12 @@ fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     match cmd.as_str() {
         "info" => {
             writeln!(w, "file            {path} ({} bytes)", f.file_len())?;
-            writeln!(w, "engine version  {}", f.version)?;
+            let whose = if f.dialect() == swmm_out::Dialect::OpenSwmm6 {
+                " (OpenSWMM 6 numbering)"
+            } else {
+                ""
+            };
+            writeln!(w, "engine version  {}{whose}", f.version)?;
             writeln!(
                 w,
                 "flow units      {} ({})",
